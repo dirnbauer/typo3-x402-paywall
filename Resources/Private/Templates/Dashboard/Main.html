@@ -1,0 +1,157 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:layout name="Module" />
+
+<f:section name="Content">
+
+<div class="x402-dashboard">
+
+    <!-- Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card card-body">
+                <h6 class="text-muted">Today</h6>
+                <h3 class="mb-0">{statsToday.total_revenue} USDC</h3>
+                <small class="text-muted">{statsToday.total_transactions} transactions</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-body">
+                <h6 class="text-muted">Last 7 Days</h6>
+                <h3 class="mb-0">{stats7d.total_revenue} USDC</h3>
+                <small class="text-muted">{stats7d.total_transactions} transactions</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-body">
+                <h6 class="text-muted">Last 30 Days</h6>
+                <h3 class="mb-0">{stats30d.total_revenue} USDC</h3>
+                <small class="text-muted">{stats30d.total_transactions} transactions</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card card-body">
+                <h6 class="text-muted">All Time</h6>
+                <h3 class="mb-0">{statsAll.total_revenue} USDC</h3>
+                <small class="text-muted">{statsAll.total_transactions} transactions</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Top Pages -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Top Pages (30 Days)</h5>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Page UID</th>
+                                <th class="text-end">Transactions</th>
+                                <th class="text-end">Revenue (USDC)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <f:for each="{topPages}" as="page">
+                                <tr>
+                                    <td>
+                                        <be:link.editRecord uid="{page.page_uid}" table="pages">
+                                            #{page.page_uid}
+                                        </be:link.editRecord>
+                                    </td>
+                                    <td class="text-end">{page.transactions}</td>
+                                    <td class="text-end">{page.revenue}</td>
+                                </tr>
+                            </f:for>
+                            <f:if condition="{topPages -> f:count()} == 0">
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted py-4">
+                                        No payments recorded yet. Configure gated pages and wait for traffic.
+                                    </td>
+                                </tr>
+                            </f:if>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Transactions -->
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Recent Transactions</h5>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Page</th>
+                                <th class="text-end">Amount</th>
+                                <th>Network</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <f:for each="{recentTransactions}" as="tx">
+                                <tr>
+                                    <td>
+                                        <f:format.date format="d.m.Y H:i">{tx.crdate}</f:format.date>
+                                    </td>
+                                    <td>#{tx.page_uid}</td>
+                                    <td class="text-end">{tx.amount} {tx.currency}</td>
+                                    <td><span class="badge bg-secondary">{tx.network}</span></td>
+                                    <td>
+                                        <f:if condition="{tx.status} == 'settled'">
+                                            <f:then><span class="badge bg-success">settled</span></f:then>
+                                            <f:else><span class="badge bg-warning">{tx.status}</span></f:else>
+                                        </f:if>
+                                    </td>
+                                </tr>
+                            </f:for>
+                            <f:if condition="{recentTransactions -> f:count()} == 0">
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        No transactions yet.
+                                    </td>
+                                </tr>
+                            </f:if>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration Info -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Configure x402 paywall settings in your site configuration
+                        (<code>config/sites/&lt;identifier&gt;/config.yaml</code>).
+                        Enable paywall per page via the "x402 Paywall" tab in page properties.
+                    </p>
+                    <a href="https://github.com/dirnbauer/typo3-x402-paywall" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm">
+                        Documentation on GitHub
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+</f:section>
+
+</html>
