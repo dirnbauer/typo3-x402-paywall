@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+    <file source-language="en" datatype="plaintext" original="messages" date="2026-04-02T00:00:00Z">
+        <header/>
+        <body>
+            <trans-unit id="pages.tx_x402_paywall_enabled">
+                <source>Enable x402 Paywall</source>
+            </trans-unit>
+            <trans-unit id="pages.tx_x402_paywall_price">
+                <source>Price (USDC)</source>
+            </trans-unit>
+            <trans-unit id="pages.tx_x402_paywall_description">
+                <source>Content Description (shown in 402 response)</source>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

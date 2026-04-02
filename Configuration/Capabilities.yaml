@@ -1,0 +1,25 @@
+# This extension practices what we preach: a Capabilities.yaml manifest.
+capabilities:
+  version: "1.0"
+  subsystems:
+    - database:read
+    - database:schema
+    - site:middleware
+    - tca:override
+  database:
+    own_tables: []
+    reads:
+      - pages
+    writes: []
+  network:
+    outbound:
+      - host: "x402.org"
+        purpose: "x402 facilitator — payment verification and settlement"
+        protocol: "https"
+  events:
+    dispatches:
+      - Webconsulting\X402Paywall\Event\PaymentRequiredEvent
+      - Webconsulting\X402Paywall\Event\PaymentReceivedEvent
+  risk:
+    level: "medium"
+    justification: "Middleware that intercepts requests, outbound network to facilitator"

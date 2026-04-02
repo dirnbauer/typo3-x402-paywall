@@ -1,0 +1,53 @@
+# Example TYPO3 site configuration with x402 paywall
+# Add this to your config/sites/<site-identifier>/config.yaml
+
+base: https://www.example.com
+languages:
+  - title: Deutsch
+    languageId: 0
+    locale: de_AT.UTF-8
+    base: /
+
+x402_paywall:
+  enabled: true
+
+  # Your wallet address to receive payments (Ethereum/Base address)
+  wallet_address: "0xYOUR_WALLET_ADDRESS_HERE"
+
+  # Network: base, base-sepolia (testnet), polygon, ethereum
+  network: "base-sepolia"
+
+  # x402 facilitator URL (Coinbase default)
+  facilitator_url: "https://x402.org/facilitator"
+
+  # Payment currency
+  currency: "USDC"
+
+  # Default price per request (in USDC)
+  default_price: "0.01"
+
+  # Pricing mode: per-request or per-page
+  pricing_mode: "per-request"
+
+  # Number of preview paragraphs before paywall (0 = full paywall)
+  free_preview_paragraphs: 2
+
+  # Routes that are always free (no payment required)
+  free_routes:
+    - "/api/v1/health"
+    - "/api/v1/sitemap"
+    - "/api/v1/navigation"
+    - "/"
+    - "/impressum"
+    - "/datenschutz"
+
+  # Route patterns that require payment (for headless/API mode)
+  # Use * as wildcard
+  gated_route_patterns:
+    - "/api/v1/content/*"
+    - "/api/v1/articles/*"
+    - "/api/v1/premium/*"
+
+  # Specific page UIDs that require payment (for traditional frontend)
+  # Alternatively, use the per-page toggle in the TYPO3 backend
+  gated_page_uids: []

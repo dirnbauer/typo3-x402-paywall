@@ -1,0 +1,24 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
+  Webconsulting\X402Paywall\:
+    resource: '../src/*'
+
+  Webconsulting\X402Paywall\Middleware\X402PaywallMiddleware:
+    public: true
+
+  Webconsulting\X402Paywall\Configuration\ConfigurationProvider:
+    public: true
+
+  Webconsulting\X402Paywall\Service\PaymentVerifier:
+    arguments:
+      $httpClient: '@GuzzleHttp\ClientInterface'
+
+  GuzzleHttp\ClientInterface:
+    class: GuzzleHttp\Client
+    arguments:
+      - timeout: 30
+        verify: true
