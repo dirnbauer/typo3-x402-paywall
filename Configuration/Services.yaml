@@ -13,6 +13,12 @@ services:
   Webconsulting\X402Paywall\Configuration\ConfigurationProvider:
     public: true
 
+  Webconsulting\X402Paywall\Controller\PaywallController:
+    public: true
+
+  Webconsulting\X402Paywall\Controller\PaywallDashboardController:
+    public: true
+
   Webconsulting\X402Paywall\Service\PaymentVerifier:
     arguments:
       $httpClient: '@GuzzleHttp\ClientInterface'

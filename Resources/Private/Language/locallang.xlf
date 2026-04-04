@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+    <file source-language="en" datatype="plaintext" original="messages" date="2026-04-04T00:00:00Z">
+        <header/>
+        <body>
+            <trans-unit id="paywall.title">
+                <source>Premium Content</source>
+            </trans-unit>
+            <trans-unit id="paywall.pay_button">
+                <source>Pay %s %s</source>
+            </trans-unit>
+            <trans-unit id="paywall.processing">
+                <source>Processing...</source>
+            </trans-unit>
+            <trans-unit id="paywall.powered_by">
+                <source>Powered by x402</source>
+            </trans-unit>
+            <trans-unit id="paywall.no_wallet">
+                <source>No wallet detected. Please install MetaMask or a compatible wallet.</source>
+            </trans-unit>
+            <trans-unit id="paywall.cancelled">
+                <source>Payment was cancelled.</source>
+            </trans-unit>
+            <trans-unit id="paywall.error">
+                <source>Payment failed. Please try again.</source>
+            </trans-unit>
+        </body>
+    </file>
+</xliff>

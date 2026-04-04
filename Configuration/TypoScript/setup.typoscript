@@ -1,0 +1,7 @@
+plugin.tx_x402paywall {
+    view {
+        templateRootPaths.10 = EXT:x402_paywall/Resources/Private/Templates/
+        partialRootPaths.10 = EXT:x402_paywall/Resources/Private/Partials/
+        layoutRootPaths.10 = EXT:x402_paywall/Resources/Private/Layouts/
+    }
+}
