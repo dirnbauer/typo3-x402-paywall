@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Webconsulting\X402Paywall\Configuration;
 
+use Webconsulting\X402Paywall\Domain\Model\PaywallConfigLike;
+
 /**
  * Holds the x402 paywall configuration for the current site.
  */
-final class PaywallConfiguration
+final class PaywallConfiguration implements PaywallConfigLike
 {
     public const NETWORK_BASE_MAINNET = 'base';
     public const NETWORK_BASE_SEPOLIA = 'base-sepolia';
@@ -60,6 +62,21 @@ final class PaywallConfiguration
         return $this->enabled
             && $this->walletAddress !== ''
             && $this->facilitatorUrl !== '';
+    }
+
+    public function getWalletAddress(): string
+    {
+        return $this->walletAddress;
+    }
+
+    public function getCurrency(): string
+    {
+        return $this->currency;
+    }
+
+    public function getNetwork(): string
+    {
+        return $this->network;
     }
 
     /**

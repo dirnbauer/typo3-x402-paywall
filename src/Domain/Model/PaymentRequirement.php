@@ -38,8 +38,8 @@ final class PaymentRequirement
             description: $contentDescription ?: "Access to $requestUri",
             mimeType: 'application/json',
             maxTimeoutSeconds: 300,
-            payTo: $config->walletAddress,
-            asset: self::getAssetForCurrency($config->currency, $config->network),
+            payTo: $config->getWalletAddress(),
+            asset: self::getAssetForCurrency($config->getCurrency(), $config->getNetwork()),
         );
     }
 
@@ -123,7 +123,7 @@ final class PaymentRequirement
 interface PaywallConfigLike
 {
     public function getCaip2NetworkId(): string;
-    public string $walletAddress { get; }
-    public string $currency { get; }
-    public string $network { get; }
+    public function getWalletAddress(): string;
+    public function getCurrency(): string;
+    public function getNetwork(): string;
 }
