@@ -8,6 +8,8 @@ use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Core\Http\JsonResponse;
 use TYPO3\CMS\Extbase\Mvc\Controller\ActionController;
 use Webconsulting\X402Paywall\Configuration\ConfigurationProvider;
+use Webconsulting\X402Paywall\Service\ContentTypeResolver;
+use Webconsulting\X402Paywall\Service\PaymentLogger;
 use Webconsulting\X402Paywall\Service\PaymentVerifier;
 
 /**
@@ -21,6 +23,8 @@ class PaywallController extends ActionController
     public function __construct(
         private readonly ConfigurationProvider $configProvider,
         private readonly PaymentVerifier $verifier,
+        private readonly PaymentLogger $paymentLogger,
+        private readonly ContentTypeResolver $contentTypeResolver,
     ) {}
 
     /**
@@ -98,6 +102,25 @@ class PaywallController extends ActionController
         if ($result['valid']) {
             // Settle the payment
             $settlement = $this->verifier->settle($paymentSignature, $paymentRequirement, $config);
+
+            $pageInfo = $this->request->getAttribute('frontend.page.information');
+            $pageRecord = $pageInfo?->getPageRecord() ?? [];
+            $pageUid = (int)($pageRecord['uid'] ?? 0);
+            $contentInfo = $this->contentTypeResolver->resolve($this->request, $pageUid);
+
+            $this->paymentLogger->logPayment(
+                request: $this->request,
+                pageUid: $pageUid,
+                amount: $body['price'] ?? $config->defaultPrice,
+                currency: $config->currency,
+                network: $config->network,
+                txHash: $settlement['txHash'] ?? null,
+                status: $settlement['settled'] ? 'settled' : 'pending',
+                settlementDetails: $settlement,
+                contentType: $contentInfo['type'],
+                contentUid: $contentInfo['uid'],
+            );
+
             return new JsonResponse([
                 'valid' => true,
                 'settled' => $settlement['settled'],

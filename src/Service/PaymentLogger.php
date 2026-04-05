@@ -28,14 +28,18 @@ final class PaymentLogger
         ?string $txHash,
         string $status = 'settled',
         array $settlementDetails = [],
+        string $contentType = 'page',
+        int $contentUid = 0,
     ): void {
         $connection = $this->connectionPool->getConnectionForTable('tx_x402_payment_log');
 
         $connection->insert('tx_x402_payment_log', [
-            'pid' => 0,
+            'pid' => $pageUid,
             'tstamp' => time(),
             'crdate' => time(),
             'page_uid' => $pageUid,
+            'content_type' => $contentType,
+            'content_uid' => $contentUid > 0 ? $contentUid : $pageUid,
             'request_uri' => (string)$request->getUri(),
             'amount' => $amount,
             'currency' => $currency,

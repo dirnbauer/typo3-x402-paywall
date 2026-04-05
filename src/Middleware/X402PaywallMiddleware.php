@@ -15,6 +15,8 @@ use Webconsulting\X402Paywall\Configuration\ConfigurationProvider;
 use Webconsulting\X402Paywall\Domain\Model\PaymentRequirement;
 use Webconsulting\X402Paywall\Event\PaymentReceivedEvent;
 use Webconsulting\X402Paywall\Event\PaymentRequiredEvent;
+use Webconsulting\X402Paywall\Service\ContentTypeResolver;
+use Webconsulting\X402Paywall\Service\PaymentLogger;
 use Webconsulting\X402Paywall\Service\PaymentVerifier;
 use Webconsulting\X402Paywall\Service\RouteGateResolver;
 use TYPO3\CMS\Core\EventDispatcher\EventDispatcher;
@@ -38,6 +40,8 @@ final class X402PaywallMiddleware implements MiddlewareInterface
         private readonly ConfigurationProvider $configProvider,
         private readonly RouteGateResolver $gateResolver,
         private readonly PaymentVerifier $verifier,
+        private readonly PaymentLogger $paymentLogger,
+        private readonly ContentTypeResolver $contentTypeResolver,
         private readonly ResponseFactoryInterface $responseFactory,
         private readonly StreamFactoryInterface $streamFactory,
         private readonly EventDispatcher $eventDispatcher,
@@ -107,6 +111,22 @@ final class X402PaywallMiddleware implements MiddlewareInterface
         // Payment valid → settle and pass through
         $settlement = $this->verifier->settle($paymentSignature, $requirementBase64, $config);
 
+        $pageUid = $this->resolvePageUid($request);
+        $contentInfo = $this->contentTypeResolver->resolve($request, $pageUid);
+
+        $this->paymentLogger->logPayment(
+            request: $request,
+            pageUid: $pageUid,
+            amount: $price,
+            currency: $config->currency,
+            network: $config->network,
+            txHash: $settlement['txHash'] ?? null,
+            status: $settlement['settled'] ? 'settled' : 'pending',
+            settlementDetails: $settlement,
+            contentType: $contentInfo['type'],
+            contentUid: $contentInfo['uid'],
+        );
+
         $this->eventDispatcher->dispatch(new PaymentReceivedEvent(
             requestUri: $requestUri,
             price: $price,
@@ -134,6 +154,24 @@ final class X402PaywallMiddleware implements MiddlewareInterface
         }
 
         return $response;
+    }
+
+    private function resolvePageUid(ServerRequestInterface $request): int
+    {
+        $page = $request->getAttribute('frontend.page.information');
+        if ($page !== null) {
+            $pageRecord = $page->getPageRecord() ?? [];
+            if (isset($pageRecord['uid'])) {
+                return (int)$pageRecord['uid'];
+            }
+        }
+
+        $routing = $request->getAttribute('routing');
+        if ($routing !== null && method_exists($routing, 'getPageId')) {
+            return (int)$routing->getPageId();
+        }
+
+        return 0;
     }
 
     private function create402Response(

@@ -12,6 +12,51 @@
             <trans-unit id="pages.tx_x402_paywall_description">
                 <source>Content Description (shown in 402 response)</source>
             </trans-unit>
+            <trans-unit id="tx_x402_payment_log">
+                <source>x402 Payment Transaction</source>
+            </trans-unit>
+            <trans-unit id="tx_x402_payment_log.page_uid">
+                <source>Page</source>
+            </trans-unit>
+            <trans-unit id="tx_x402_payment_log.content_type">
+                <source>Content Type</source>
+            </trans-unit>
+            <trans-unit id="tx_x402_payment_log.content_uid">
+                <source>Content UID</source>
+            </trans-unit>
+            <trans-unit id="tx_x402_payment_log.amount">
+                <source>Amount</source>
+            </trans-unit>
+            <trans-unit id="tx_x402_payment_log.currency">
+                <source>Currency</source>
+            </trans-unit>
+            <trans-unit id="tx_x402_payment_log.network">
+                <source>Network</source>
+            </trans-unit>
+            <trans-unit id="tx_x402_payment_log.status">
+                <source>Status</source>
+            </trans-unit>
+            <trans-unit id="tx_x402_payment_log.tx_hash">
+                <source>Transaction Hash</source>
+            </trans-unit>
+            <trans-unit id="tx_x402_payment_log.payer_address">
+                <source>Payer Wallet</source>
+            </trans-unit>
+            <trans-unit id="tx_x402_payment_log.request_uri">
+                <source>Request URI</source>
+            </trans-unit>
+            <trans-unit id="tx_x402_payment_log.facilitator_response">
+                <source>Facilitator Response</source>
+            </trans-unit>
+            <trans-unit id="tx_x402_payment_log.tab.transaction">
+                <source>Transaction</source>
+            </trans-unit>
+            <trans-unit id="tx_x402_payment_log.tab.content">
+                <source>Content</source>
+            </trans-unit>
+            <trans-unit id="tx_x402_payment_log.tab.payment">
+                <source>Payment Details</source>
+            </trans-unit>
         </body>
     </file>
 </xliff>

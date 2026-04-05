@@ -14,6 +14,8 @@ CREATE TABLE tx_x402_payment_log (
     crdate int(11) unsigned DEFAULT '0' NOT NULL,
 
     page_uid int(11) unsigned DEFAULT '0' NOT NULL,
+    content_type varchar(100) DEFAULT 'page' NOT NULL,
+    content_uid int(11) unsigned DEFAULT '0' NOT NULL,
     request_uri text,
     amount varchar(30) DEFAULT '' NOT NULL,
     currency varchar(10) DEFAULT 'USDC' NOT NULL,
@@ -28,6 +30,7 @@ CREATE TABLE tx_x402_payment_log (
     PRIMARY KEY (uid),
     KEY parent (pid),
     KEY page_uid (page_uid),
+    KEY content_type (content_type),
     KEY crdate (crdate),
     KEY status (status),
     KEY network (network)
