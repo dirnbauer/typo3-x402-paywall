@@ -13,7 +13,7 @@ use Webconsulting\X402Paywall\Service\PaymentLogger;
  *   Agent: "How much revenue did we earn this week?"
  *   Tool:  { total_revenue: 12.45, total_transactions: 87, period: "last 7 days" }
  */
-final class X402StatsTool
+final class X402StatsTool extends AbstractMcpTool
 {
     public function __construct(
         private readonly PaymentLogger $paymentLogger,
@@ -52,7 +52,7 @@ final class X402StatsTool
     /**
      * @param array<string, mixed> $args
      */
-    public function execute(array $args): string
+    protected function doExecute(array $args): string
     {
         $period = (string)($args['period'] ?? '30days');
 

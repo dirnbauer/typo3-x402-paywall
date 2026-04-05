@@ -17,7 +17,7 @@ use GuzzleHttp\Exception\GuzzleException;
  *   Agent: "Is https://example.com/news/1 behind a paywall?"
  *   Tool:  { status: 402, price: "0.01", currency: "USDC", network: "base" }
  */
-final class X402ProbeTool
+final class X402ProbeTool extends AbstractMcpTool
 {
     public function __construct(
         private readonly ClientInterface $httpClient,
@@ -56,7 +56,7 @@ final class X402ProbeTool
     /**
      * @param array<string, mixed> $args
      */
-    public function execute(array $args): string
+    protected function doExecute(array $args): string
     {
         $url = (string)($args['url'] ?? '');
 

@@ -15,7 +15,7 @@ namespace Webconsulting\X402Paywall\Mcp\Tool;
  *   Agent: "Decode this header: eyJzY2hlbWUi..."
  *   Tool:  { scheme: "exact", network: "base-sepolia", price: "10000", payTo: "0x..." }
  */
-final class X402DecodeHeaderTool
+final class X402DecodeHeaderTool extends AbstractMcpTool
 {
     public function getName(): string
     {
@@ -50,7 +50,7 @@ final class X402DecodeHeaderTool
     /**
      * @param array<string, mixed> $args
      */
-    public function execute(array $args): string
+    protected function doExecute(array $args): string
     {
         $header = trim((string)($args['header'] ?? ''));
 

@@ -13,7 +13,7 @@ use Webconsulting\X402Paywall\Service\PaymentLogger;
  *   Agent: "Show me the last 5 payments and what content they were for."
  *   Tool:  [{ amount: "0.01 USDC", content_type: "news", content_uid: 42, tx_hash: "0x..." }]
  */
-final class X402TransactionsTool
+final class X402TransactionsTool extends AbstractMcpTool
 {
     public function __construct(
         private readonly PaymentLogger $paymentLogger,
@@ -54,7 +54,7 @@ final class X402TransactionsTool
     /**
      * @param array<string, mixed> $args
      */
-    public function execute(array $args): string
+    protected function doExecute(array $args): string
     {
         $limit = min(50, max(1, (int)($args['limit'] ?? 10)));
         $rows = $this->paymentLogger->getRecentTransactions($limit);

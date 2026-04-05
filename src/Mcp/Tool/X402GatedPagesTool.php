@@ -13,7 +13,7 @@ use TYPO3\CMS\Core\Database\ConnectionPool;
  *   Agent: "Which pages are behind the paywall?"
  *   Tool:  [{ uid: 5, title: "Premium Article", price: "0.05 USDC", slug: "/premium-article" }]
  */
-final class X402GatedPagesTool
+final class X402GatedPagesTool extends AbstractMcpTool
 {
     public function __construct(
         private readonly ConnectionPool $connectionPool,
@@ -45,7 +45,7 @@ final class X402GatedPagesTool
     /**
      * @param array<string, mixed> $args
      */
-    public function execute(array $args): string
+    protected function doExecute(array $args): string
     {
         $qb = $this->connectionPool->getQueryBuilderForTable('pages');
         $rows = $qb
