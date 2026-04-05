@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <path fill="currentColor" opacity=".4" d="M32 12 16 21v11c0 10 6.8 19.5 16 22.5 9.2-3 16-12.5 16-22.5V21L32 12Z"/>
+  <path fill="currentColor" opacity=".8" d="M32 12 16 21v11c0 10 6.8 19.5 16 22.5 9.2-3 16-12.5 16-22.5V21L32 12Z"/>
   <path fill="currentColor" d="M32 6 10 17v15c0 13.2 9.4 25.5 22 29 12.6-3.5 22-15.8 22-29V17L32 6Zm0 6 16 9v11c0 10-6.8 19.5-16 22.5C24 51.5 16 42 16 32V21l16-9Z"/>
   <path fill="var(--icon-color-accent, #ff8700)" d="M26 35v-5.5a6 6 0 0 1 12 0V35h-3.5v-5.5a2.5 2.5 0 0 0-5 0V35H26Z"/>
   <rect fill="var(--icon-color-accent, #ff8700)" x="24" y="34" width="16" height="12" rx="2.5"/>
