@@ -1,0 +1,195 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:layout name="Module" />
+
+<f:section name="Content">
+
+<f:asset.script identifier="gsap-cdn" src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" priority="true"/>
+<f:asset.script identifier="x402-simulator" src="{f:uri.resource(path: 'JavaScript/simulator.js')}" priority="false" type="module"/>
+
+<style>
+.x402-sim { font-family: 'Courier New', monospace; }
+.x402-sim .sim-header { display:flex; align-items:center; gap:16px; margin-bottom:20px; }
+.x402-sim .scenario-bar { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+.x402-sim .scenario-bar select, .x402-sim .scenario-bar input { font-size:13px; }
+.x402-sim .btn-simulate { padding:8px 24px; font-size:14px; font-weight:600; }
+
+/* Flow diagram */
+.x402-flow { background:#1a1a2e; border-radius:12px; padding:32px 24px; margin-bottom:20px; position:relative; overflow:hidden; }
+.x402-flow .flow-row { display:flex; align-items:center; justify-content:space-between; gap:0; position:relative; min-height:120px; }
+.x402-node { background:#16213e; border:2px solid #0f3460; border-radius:10px; padding:16px 20px; text-align:center; min-width:130px; position:relative; z-index:2; }
+.x402-node.active { border-color:#e94560; box-shadow:0 0 20px rgba(233,69,96,0.4); }
+.x402-node.success { border-color:#00b4d8; box-shadow:0 0 20px rgba(0,180,216,0.4); }
+.x402-node .node-icon { font-size:28px; display:block; margin-bottom:6px; }
+.x402-node .node-label { color:#a8b2d8; font-size:11px; letter-spacing:1px; text-transform:uppercase; }
+.x402-node .node-name { color:#ccd6f6; font-size:14px; font-weight:600; margin-top:2px; }
+
+.flow-connector { flex:1; height:2px; background:#0f3460; position:relative; overflow:visible; }
+.flow-connector .arrow-track { position:absolute; top:-1px; left:0; right:0; height:4px; }
+.flow-arrow { position:absolute; width:40px; height:40px; top:50%; transform:translateY(-50%); z-index:3; font-size:18px; display:flex; align-items:center; justify-content:center; opacity:0; }
+.flow-label { position:absolute; top:-24px; left:50%; transform:translateX(-50%); white-space:nowrap; font-size:11px; color:#8892b0; background:#1a1a2e; padding:2px 8px; border-radius:4px; opacity:0; }
+.status-badge { position:absolute; bottom:-28px; left:50%; transform:translateX(-50%); font-size:12px; font-weight:700; padding:3px 10px; border-radius:20px; opacity:0; white-space:nowrap; }
+.status-badge.s-402 { background:#c53030; color:#fff; }
+.status-badge.s-200 { background:#276749; color:#fff; }
+.status-badge.s-0   { background:#744210; color:#fff; }
+
+/* Panels */
+.sim-panels { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+.sim-panel { background:#16213e; border:1px solid #0f3460; border-radius:8px; overflow:hidden; }
+.sim-panel-header { background:#0f3460; color:#ccd6f6; padding:8px 14px; font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase; display:flex; align-items:center; gap:8px; }
+.sim-panel-body { padding:14px; min-height:160px; max-height:280px; overflow-y:auto; }
+.sim-panel-body pre { margin:0; font-size:11px; color:#a8b2d8; white-space:pre-wrap; word-break:break-all; }
+.sim-panel-body .key { color:#79b8ff; }
+.sim-panel-body .val-str { color:#9ecbff; }
+.sim-panel-body .val-num { color:#f8c555; }
+
+/* Status badge in panel */
+.res-status { display:inline-block; padding:4px 12px; border-radius:20px; font-weight:700; font-size:16px; margin-bottom:10px; }
+.res-status.s-402 { background:#c53030; color:#fff; }
+.res-status.s-200 { background:#276749; color:#fff; }
+.res-status.s-0   { background:#744210; color:#fff; animation: pulse 1s infinite; }
+.res-status.s-idle { background:#2d3748; color:#a0aec0; }
+
+/* Log */
+.sim-log { background:#0d1117; border:1px solid #0f3460; border-radius:8px; overflow:hidden; }
+.sim-log-header { background:#0f3460; color:#ccd6f6; padding:8px 14px; font-size:12px; font-weight:700; letter-spacing:1px; text-transform:uppercase; }
+.sim-log-body { padding:10px 14px; min-height:80px; max-height:160px; overflow-y:auto; font-size:11px; font-family:monospace; }
+.log-line { padding:2px 0; opacity:0; }
+.log-line.t-send      { color:#79b8ff; }
+.log-line.t-receive   { color:#85e89d; }
+.log-line.t-info      { color:#b392f0; }
+.log-line.t-facilitator { color:#ffea7f; }
+.log-line.t-reject    { color:#f97583; }
+.log-line.t-error     { color:#f97583; }
+.log-line.t-idle      { color:#586069; }
+
+/* Scenario descriptions */
+.scenario-desc { color:#8892b0; font-size:12px; margin-top:6px; font-style:italic; }
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+</style>
+
+<div class="x402-sim">
+
+    <!-- Scenario picker + URL bar -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="scenario-bar">
+                <div style="flex:0 0 auto">
+                    <label class="form-label fw-bold mb-1" style="font-size:12px;text-transform:uppercase;letter-spacing:1px">Scenario</label>
+                    <select id="sim-scenario" class="form-select form-select-sm" style="min-width:280px">
+                        <f:for each="{scenarios}" as="s">
+                            <option value="{s.id}"
+                                data-url="{s.url}"
+                                data-signature="{s.signature}"
+                                data-description="{s.description}">{s.label}</option>
+                        </f:for>
+                    </select>
+                </div>
+                <div style="flex:1">
+                    <label class="form-label fw-bold mb-1" style="font-size:12px;text-transform:uppercase;letter-spacing:1px">URL</label>
+                    <input id="sim-url" type="url" class="form-control form-control-sm" value="{scenarios.0.url}" placeholder="https://your-typo3.local/gated-page"/>
+                </div>
+                <div style="flex:0 0 auto;align-self:flex-end">
+                    <button id="sim-run" class="btn btn-primary btn-simulate">
+                        ▶ Simulate
+                    </button>
+                </div>
+            </div>
+            <div id="sim-desc" class="scenario-desc">{scenarios.0.description}</div>
+        </div>
+    </div>
+
+    <!-- Flow diagram -->
+    <div class="x402-flow">
+        <div class="flow-row">
+
+            <!-- Client node -->
+            <div class="x402-node" id="node-client">
+                <span class="node-icon">🤖</span>
+                <div class="node-label">Requester</div>
+                <div class="node-name">Client / AI Agent</div>
+            </div>
+
+            <!-- Client → TYPO3 connector -->
+            <div class="flow-connector" id="conn-c-t">
+                <div class="flow-arrow" id="arrow-c-t" style="left:0">📦</div>
+                <div class="flow-label" id="label-c-t">GET + headers</div>
+                <div class="flow-arrow" id="arrow-t-c" style="left:0">⚡</div>
+                <div class="flow-label" id="label-t-c">Response</div>
+                <div class="status-badge" id="badge-c-t"></div>
+            </div>
+
+            <!-- TYPO3 node -->
+            <div class="x402-node" id="node-typo3">
+                <span class="node-icon">🔒</span>
+                <div class="node-label">Server</div>
+                <div class="node-name">TYPO3 Paywall</div>
+            </div>
+
+            <!-- TYPO3 → Facilitator connector -->
+            <div class="flow-connector" id="conn-t-f">
+                <div class="flow-arrow" id="arrow-t-f" style="left:0">🔑</div>
+                <div class="flow-label" id="label-t-f">Verify signature</div>
+                <div class="flow-arrow" id="arrow-f-t" style="left:0">✅</div>
+                <div class="flow-label" id="label-f-t">Result</div>
+                <div class="status-badge" id="badge-t-f"></div>
+            </div>
+
+            <!-- Facilitator node -->
+            <div class="x402-node" id="node-facilitator">
+                <span class="node-icon">🌐</span>
+                <div class="node-label">Coinbase</div>
+                <div class="node-name">x402 Facilitator</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Request / Response panels -->
+    <div class="sim-panels">
+        <div class="sim-panel">
+            <div class="sim-panel-header">📤 Request</div>
+            <div class="sim-panel-body" id="panel-request">
+                <pre class="t-idle">Select a scenario and click ▶ Simulate</pre>
+            </div>
+        </div>
+        <div class="sim-panel">
+            <div class="sim-panel-header">
+                📥 Response
+                <span id="res-status-badge" class="res-status s-idle" style="margin-left:auto">—</span>
+            </div>
+            <div class="sim-panel-body" id="panel-response">
+                <pre class="t-idle">Waiting for simulation...</pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Decoded requirement panel (shown when 402) -->
+    <div id="panel-requirement-wrap" style="display:none" class="mb-3">
+        <div class="sim-panel">
+            <div class="sim-panel-header">💳 Decoded PAYMENT-REQUIRED</div>
+            <div class="sim-panel-body" id="panel-requirement">
+                <pre></pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log -->
+    <div class="sim-log">
+        <div class="sim-log-header">📋 Event Log</div>
+        <div class="sim-log-body" id="sim-log-body">
+            <div class="log-line t-idle">Ready — select a scenario above</div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// Pass PHP data to the JS module via data attribute
+document.documentElement.dataset.simRunUrl = '<f:be.uri.moduleAction action="runSimulation" moduleName="web_x402_paywall" />';
+</script>
+
+</f:section>
+</html>

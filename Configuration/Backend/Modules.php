@@ -17,6 +17,13 @@ return [
             '_default' => [
                 'target' => PaywallDashboardController::class . '::mainAction',
             ],
+            'simulator' => [
+                'target' => PaywallDashboardController::class . '::simulatorAction',
+            ],
+            'runSimulation' => [
+                'target' => PaywallDashboardController::class . '::runSimulationAction',
+                'methods' => ['POST'],
+            ],
         ],
     ],
 ];
