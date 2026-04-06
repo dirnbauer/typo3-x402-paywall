@@ -3,7 +3,10 @@
     "allow": [
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(find /Users/dirnbauer/projects/typo3-x402-paywall -path */hn/typo3-mcp-server* -name *.php)",
+      "Bash(composer show:*)",
+      "Bash(find . -path */hn/* -name *.php)"
     ]
   }
 }

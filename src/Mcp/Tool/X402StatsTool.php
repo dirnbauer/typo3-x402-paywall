@@ -34,6 +34,14 @@ final class X402StatsTool extends AbstractMcpTool
     /**
      * @return array<string, mixed>
      */
+    public function getSchema(): array
+    {
+        return $this->getInputSchema();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     public function getInputSchema(): array
     {
         return [
