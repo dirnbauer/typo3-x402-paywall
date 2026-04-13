@@ -45,7 +45,5 @@ ExtensionManagementUtility::addTCAcolumns('pages', $tempColumns);
 
 ExtensionManagementUtility::addToAllTCAtypes(
     'pages',
-    '--div--;x402 Paywall, tx_x402_paywall_enabled, tx_x402_paywall_price, tx_x402_paywall_description',
-    '',
-    'after:description'
+    '--div--;LLL:EXT:x402_paywall/Resources/Private/Language/locallang_db.xlf:pages.tab.x402_paywall, tx_x402_paywall_enabled, tx_x402_paywall_price, tx_x402_paywall_description'
 );

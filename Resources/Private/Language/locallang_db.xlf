@@ -3,6 +3,9 @@
     <file source-language="en" datatype="plaintext" original="messages" date="2026-04-02T00:00:00Z">
         <header/>
         <body>
+            <trans-unit id="pages.tab.x402_paywall">
+                <source>x402 Paywall</source>
+            </trans-unit>
             <trans-unit id="pages.tx_x402_paywall_enabled">
                 <source>Enable x402 Paywall</source>
             </trans-unit>
