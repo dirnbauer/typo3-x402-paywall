@@ -106,11 +106,11 @@
                                     </td>
                                     <td>#{tx.page_uid}</td>
                                     <td class="text-end">{tx.amount} {tx.currency}</td>
-                                    <td><span class="badge bg-secondary">{tx.network}</span></td>
+                                    <td><span class="badge badge-secondary">{tx.network}</span></td>
                                     <td>
                                         <f:if condition="{tx.status} == 'settled'">
-                                            <f:then><span class="badge bg-success">settled</span></f:then>
-                                            <f:else><span class="badge bg-warning">{tx.status}</span></f:else>
+                                            <f:then><span class="badge badge-success">settled</span></f:then>
+                                            <f:else><span class="badge badge-warning">{tx.status}</span></f:else>
                                         </f:if>
                                     </td>
                                 </tr>
