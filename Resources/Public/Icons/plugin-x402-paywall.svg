@@ -1,6 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16">
-  <path fill="currentColor" opacity=".8" d="M8 3 4 5.5v3c0 2.5 1.7 4.8 4 5.6 2.3-.8 4-3.1 4-5.6V5.5L8 3Z"/>
-  <path fill="currentColor" d="M8 1.5 2 4.5v4c0 3.4 2.5 6.5 6 7.5 3.5-1 6-4.1 6-7.5V4.5L8 1.5Zm0 1.5 4.5 2.5v3.5c0 2.8-1.7 5.1-4.5 6-2.8-.9-4.5-3.2-4.5-6V5.5L8 3Z"/>
+  <style>
+    .x402-shield-fill { fill: color-mix(in srgb, currentColor 18%, white); }
+    .x402-shield-border { fill: color-mix(in srgb, currentColor 55%, black); }
+  </style>
+  <path class="x402-shield-fill" fill="#efefef" d="M8 3 4 5.5v3c0 2.5 1.7 4.8 4 5.6 2.3-.8 4-3.1 4-5.6V5.5L8 3Z"/>
+  <path class="x402-shield-border" fill="#515151" d="M8 1.5 2 4.5v4c0 3.4 2.5 6.5 6 7.5 3.5-1 6-4.1 6-7.5V4.5L8 1.5Zm0 1.5 4.5 2.5v3.5c0 2.8-1.7 5.1-4.5 6-2.8-.9-4.5-3.2-4.5-6V5.5L8 3Z"/>
   <path fill="var(--icon-color-accent, #ff8700)" d="M6.25 8.5v-2a1.75 1.75 0 0 1 3.5 0v2H8.5v-2a.75.75 0 0 0-1.5 0v2H6.25Z"/>
   <rect fill="var(--icon-color-accent, #ff8700)" x="5.5" y="8.25" width="5" height="4" rx=".75"/>
 </svg>
