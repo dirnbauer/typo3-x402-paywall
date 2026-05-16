@@ -1,0 +1,62 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
+  Webconsulting\X402Paywall\:
+    resource: '../src/*'
+
+  Webconsulting\X402Paywall\Middleware\X402PaywallMiddleware:
+    public: true
+
+  Webconsulting\X402Paywall\Configuration\ConfigurationProvider:
+    public: true
+
+  Webconsulting\X402Paywall\Controller\PaywallController:
+    public: true
+
+  Webconsulting\X402Paywall\Controller\PaywallDashboardController:
+    public: true
+
+  Webconsulting\X402Paywall\Service\PaymentVerifier:
+    arguments:
+      $httpClient: '@GuzzleHttp\ClientInterface'
+
+  GuzzleHttp\ClientInterface:
+    class: GuzzleHttp\Client
+    arguments:
+      - timeout: 30
+        verify: true
+
+  # ── x402 MCP Tools ──────────────────────────────────────────────────────────
+  # Registered for hn/typo3-mcp-server (tag: mcp.tool).
+  # Each tool appears as a callable function in the MCP server context,
+  # letting AI agents (Claude, GPT, etc.) query and probe the paywall.
+
+  Webconsulting\X402Paywall\Mcp\Tool\X402ProbeTool:
+    public: true
+    arguments:
+      $httpClient: '@GuzzleHttp\ClientInterface'
+    tags:
+      - name: mcp.tool
+
+  Webconsulting\X402Paywall\Mcp\Tool\X402GatedPagesTool:
+    public: true
+    tags:
+      - name: mcp.tool
+
+  Webconsulting\X402Paywall\Mcp\Tool\X402StatsTool:
+    public: true
+    tags:
+      - name: mcp.tool
+
+  Webconsulting\X402Paywall\Mcp\Tool\X402TransactionsTool:
+    public: true
+    tags:
+      - name: mcp.tool
+
+  Webconsulting\X402Paywall\Mcp\Tool\X402DecodeHeaderTool:
+    public: true
+    tags:
+      - name: mcp.tool
