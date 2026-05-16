@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Webconsulting\X402Paywall\Mcp\Tool;
 
 use Webconsulting\X402Paywall\Service\PaymentLogger;
+use Webconsulting\X402Paywall\Utility\Json;
+use Webconsulting\X402Paywall\Utility\ScalarValue;
 
 /**
  * MCP Tool: list recent x402 payment transactions.
@@ -64,25 +66,32 @@ final class X402TransactionsTool extends AbstractMcpTool
      */
     protected function doExecute(array $args): string
     {
-        $limit = min(50, max(1, (int)($args['limit'] ?? 10)));
+        $limit = min(50, max(1, ScalarValue::int($args['limit'] ?? null, 10)));
         $rows = $this->paymentLogger->getRecentTransactions($limit);
 
         $transactions = array_map(static fn(array $row) => [
-            'uid' => (int)$row['uid'],
-            'date' => date('Y-m-d H:i:s', (int)$row['crdate']),
-            'page_uid' => (int)$row['page_uid'],
-            'content_type' => $row['content_type'] ?? 'page',
-            'content_uid' => (int)($row['content_uid'] ?? $row['page_uid']),
-            'amount_usdc' => $row['amount'],
-            'currency' => $row['currency'],
-            'network' => $row['network'],
-            'status' => $row['status'],
-            'tx_hash' => $row['tx_hash'] ? substr($row['tx_hash'], 0, 18) . '...' : null,
+            'uid' => ScalarValue::int($row['uid'] ?? null),
+            'date' => date('Y-m-d H:i:s', ScalarValue::int($row['crdate'] ?? null)),
+            'page_uid' => ScalarValue::int($row['page_uid'] ?? null),
+            'content_type' => ScalarValue::string($row['content_type'] ?? null, 'page'),
+            'content_uid' => ScalarValue::int($row['content_uid'] ?? ($row['page_uid'] ?? null)),
+            'amount_usdc' => ScalarValue::string($row['amount'] ?? null),
+            'currency' => ScalarValue::string($row['currency'] ?? null),
+            'network' => ScalarValue::string($row['network'] ?? null),
+            'status' => ScalarValue::string($row['status'] ?? null),
+            'tx_hash' => self::shortHash($row['tx_hash'] ?? null),
         ], $rows);
 
-        return json_encode([
+        return Json::encode([
             'count' => count($transactions),
             'transactions' => $transactions,
         ], JSON_PRETTY_PRINT);
+    }
+
+    private static function shortHash(mixed $value): ?string
+    {
+        $hash = ScalarValue::string($value);
+
+        return $hash === '' ? null : substr($hash, 0, 18) . '...';
     }
 }

@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Webconsulting\X402Paywall\Mcp\Tool;
 
 use Webconsulting\X402Paywall\Service\PaymentLogger;
+use Webconsulting\X402Paywall\Utility\Json;
+use Webconsulting\X402Paywall\Utility\ScalarValue;
 
 /**
  * MCP Tool: get x402 payment revenue statistics.
@@ -62,27 +64,34 @@ final class X402StatsTool extends AbstractMcpTool
      */
     protected function doExecute(array $args): string
     {
-        $period = (string)($args['period'] ?? '30days');
+        $period = is_scalar($args['period'] ?? null) ? (string)$args['period'] : '30days';
 
         $since = match ($period) {
-            'today' => strtotime('today') ?: 0,
-            '7days' => strtotime('-7 days') ?: 0,
-            '30days' => strtotime('-30 days') ?: 0,
+            'today' => $this->timestamp('today'),
+            '7days' => $this->timestamp('-7 days'),
+            '30days' => $this->timestamp('-30 days'),
             default => 0,
         };
 
         $stats = $this->paymentLogger->getStats($since);
         $topPages = $this->paymentLogger->getTopPages(5, $since);
 
-        return json_encode([
+        return Json::encode([
             'period' => $period,
             'total_revenue_usdc' => $stats['total_revenue'],
             'total_transactions' => $stats['total_transactions'],
             'top_pages' => array_map(static fn(array $p) => [
-                'page_uid' => (int)$p['page_uid'],
-                'transactions' => (int)$p['transactions'],
-                'revenue_usdc' => round((float)$p['revenue'], 4),
+                'page_uid' => ScalarValue::int($p['page_uid'] ?? null),
+                'transactions' => ScalarValue::int($p['transactions'] ?? null),
+                'revenue_usdc' => round(ScalarValue::float($p['revenue'] ?? null), 4),
             ], $topPages),
         ], JSON_PRETTY_PRINT);
+    }
+
+    private function timestamp(string $modifier): int
+    {
+        $timestamp = strtotime($modifier);
+
+        return $timestamp === false ? 0 : $timestamp;
     }
 }

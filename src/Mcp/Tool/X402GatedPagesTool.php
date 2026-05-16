@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Webconsulting\X402Paywall\Mcp\Tool;
 
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use Webconsulting\X402Paywall\Utility\Json;
 
 /**
  * MCP Tool: list all TYPO3 pages with x402 paywall enabled.
@@ -67,16 +68,25 @@ final class X402GatedPagesTool extends AbstractMcpTool
             ->fetchAllAssociative();
 
         $result = array_map(static fn(array $row) => [
-            'uid' => (int)$row['uid'],
-            'title' => $row['title'],
-            'slug' => $row['slug'],
-            'price' => ($row['tx_x402_paywall_price'] ?: 'default') . ' USDC',
-            'description' => $row['tx_x402_paywall_description'],
+            'uid' => is_scalar($row['uid'] ?? null) ? (int)$row['uid'] : 0,
+            'title' => is_scalar($row['title'] ?? null) ? (string)$row['title'] : '',
+            'slug' => is_scalar($row['slug'] ?? null) ? (string)$row['slug'] : '',
+            'price' => self::priceLabel($row['tx_x402_paywall_price'] ?? null),
+            'description' => is_scalar($row['tx_x402_paywall_description'] ?? null) ? (string)$row['tx_x402_paywall_description'] : '',
         ], $rows);
 
-        return json_encode([
+        return Json::encode([
             'count' => count($result),
             'pages' => $result,
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    }
+
+    private static function priceLabel(mixed $price): string
+    {
+        if (!is_scalar($price) || (string)$price === '') {
+            return 'default USDC';
+        }
+
+        return (string)$price . ' USDC';
     }
 }

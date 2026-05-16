@@ -1,6 +1,12 @@
 parameters:
-    level: 8
+    level: max
     paths:
         - src
-    excludePaths:
-        - tests
+        - tests/Unit
+    tmpDir: var/phpstan
+    reportUnmatchedIgnoredErrors: true
+    typo3:
+        requestGetAttributeMapping:
+            frontend.page.information: TYPO3\CMS\Frontend\Page\PageInformation|null
+            routing: TYPO3\CMS\Core\Routing\PageArguments|null
+            site: TYPO3\CMS\Core\Site\Entity\Site|null

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Webconsulting\X402Paywall\Service;
 
 use Psr\Http\Message\ServerRequestInterface;
+use Webconsulting\X402Paywall\Utility\ScalarValue;
 
 /**
  * Resolves the actual content type and record UID from a PSR-7 request.
@@ -62,7 +63,7 @@ final class ContentTypeResolver
                 continue;
             }
 
-            $uid = (int)($namespaceParams[$mapping['uidParam']] ?? 0);
+            $uid = ScalarValue::int($namespaceParams[$mapping['uidParam']] ?? null);
             if ($uid > 0) {
                 return ['type' => $mapping['type'], 'uid' => $uid];
             }

@@ -4,10 +4,11 @@ declare(strict_types=1);
 
 namespace Webconsulting\X402Paywall\Service;
 
-use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Exception\GuzzleException;
 use Psr\Log\LoggerInterface;
+use TYPO3\CMS\Core\Http\RequestFactory;
 use Webconsulting\X402Paywall\Configuration\PaywallConfiguration;
+use Webconsulting\X402Paywall\Utility\Json;
+use Webconsulting\X402Paywall\Utility\ScalarValue;
 
 /**
  * Verifies x402 payment signatures by calling the facilitator's /verify endpoint.
@@ -16,14 +17,14 @@ use Webconsulting\X402Paywall\Configuration\PaywallConfiguration;
 final class PaymentVerifier
 {
     public function __construct(
-        private readonly ClientInterface $httpClient,
+        private readonly RequestFactory $requestFactory,
         private readonly LoggerInterface $logger,
     ) {}
 
     /**
      * Verify a payment signature against the facilitator.
      *
-     * @return array{valid: bool, error?: string, details?: array<string, mixed>}
+     * @return array{valid: true, details: array<string, mixed>}|array{valid: false, error: string}
      */
     public function verify(
         string $paymentSignatureBase64,
@@ -34,7 +35,7 @@ final class PaymentVerifier
         $verifyUrl = $facilitatorUrl . '/verify';
 
         try {
-            $response = $this->httpClient->request('POST', $verifyUrl, [
+            $response = $this->requestFactory->request($verifyUrl, 'POST', [
                 'json' => [
                     'paymentPayload' => $paymentSignatureBase64,
                     'paymentRequirements' => $paymentRequirementBase64,
@@ -47,7 +48,7 @@ final class PaymentVerifier
             ]);
 
             $statusCode = $response->getStatusCode();
-            $body = json_decode((string)$response->getBody(), true);
+            $body = self::stringKeyArray(Json::decodeObject((string)$response->getBody()));
 
             if ($statusCode === 200 && ($body['valid'] ?? false) === true) {
                 $this->logger->info('x402 payment verified successfully', [
@@ -63,9 +64,9 @@ final class PaymentVerifier
 
             return [
                 'valid' => false,
-                'error' => $body['error'] ?? $body['message'] ?? 'Verification failed',
+                'error' => ScalarValue::string($body['error'] ?? ($body['message'] ?? null), 'Verification failed'),
             ];
-        } catch (GuzzleException $e) {
+        } catch (\Throwable $e) {
             $this->logger->error('x402 facilitator communication error', [
                 'url' => $verifyUrl,
                 'error' => $e->getMessage(),
@@ -81,7 +82,7 @@ final class PaymentVerifier
     /**
      * Settle a verified payment via the facilitator.
      *
-     * @return array{settled: bool, txHash?: string, error?: string}
+     * @return array{settled: true, txHash: string}|array{settled: false, error: string}
      */
     public function settle(
         string $paymentSignatureBase64,
@@ -92,7 +93,7 @@ final class PaymentVerifier
         $settleUrl = $facilitatorUrl . '/settle';
 
         try {
-            $response = $this->httpClient->request('POST', $settleUrl, [
+            $response = $this->requestFactory->request($settleUrl, 'POST', [
                 'json' => [
                     'paymentPayload' => $paymentSignatureBase64,
                     'paymentRequirements' => $paymentRequirementBase64,
@@ -104,23 +105,24 @@ final class PaymentVerifier
                 ],
             ]);
 
-            $body = json_decode((string)$response->getBody(), true);
+            $body = self::stringKeyArray(Json::decodeObject((string)$response->getBody()));
 
-            if ($response->getStatusCode() === 200) {
+            if ($response->getStatusCode() === 200 && ($body['settled'] ?? false) === true) {
+                $txHash = ScalarValue::string($body['txHash'] ?? null);
                 $this->logger->info('x402 payment settled', [
-                    'txHash' => $body['txHash'] ?? 'unknown',
+                    'txHash' => $txHash !== '' ? $txHash : 'unknown',
                 ]);
                 return [
                     'settled' => true,
-                    'txHash' => $body['txHash'] ?? null,
+                    'txHash' => $txHash,
                 ];
             }
 
             return [
                 'settled' => false,
-                'error' => $body['error'] ?? 'Settlement failed',
+                'error' => ScalarValue::string($body['error'] ?? ($body['message'] ?? null), 'Settlement failed'),
             ];
-        } catch (GuzzleException $e) {
+        } catch (\Throwable $e) {
             $this->logger->error('x402 settlement error', [
                 'error' => $e->getMessage(),
             ]);
@@ -138,12 +140,28 @@ final class PaymentVerifier
     public function testConnection(PaywallConfiguration $config): bool
     {
         try {
-            $response = $this->httpClient->request('GET', rtrim($config->facilitatorUrl, '/'), [
+            $response = $this->requestFactory->request(rtrim($config->facilitatorUrl, '/'), 'GET', [
                 'timeout' => 10,
             ]);
             return $response->getStatusCode() < 500;
-        } catch (GuzzleException) {
+        } catch (\Throwable) {
             return false;
         }
+    }
+
+    /**
+     * @param array<array-key, mixed> $values
+     * @return array<string, mixed>
+     */
+    private static function stringKeyArray(array $values): array
+    {
+        $result = [];
+        foreach ($values as $key => $value) {
+            if (is_string($key)) {
+                $result[$key] = $value;
+            }
+        }
+
+        return $result;
     }
 }

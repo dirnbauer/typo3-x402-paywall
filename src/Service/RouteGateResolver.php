@@ -6,12 +6,17 @@ namespace Webconsulting\X402Paywall\Service;
 
 use Psr\Http\Message\ServerRequestInterface;
 use Webconsulting\X402Paywall\Configuration\PaywallConfiguration;
+use Webconsulting\X402Paywall\Utility\ScalarValue;
 
 /**
  * Determines whether a given request should be gated behind x402 payment.
  */
 final class RouteGateResolver
 {
+    public function __construct(
+        private readonly RequestAttributeResolver $requestAttributeResolver,
+    ) {}
+
     /**
      * Check if the current request requires payment.
      */
@@ -38,18 +43,14 @@ final class RouteGateResolver
         }
 
         // Check page UID (for traditional TYPO3 frontend)
-        $pageId = $this->getPageIdFromRequest($request);
-        if ($pageId !== null && in_array($pageId, $config->gatedPageUids, true)) {
+        $pageId = $this->requestAttributeResolver->getPageUid($request);
+        if ($pageId > 0 && in_array($pageId, $config->gatedPageUids, true)) {
             return true;
         }
 
-        // Check page TSconfig / TCA field (future: per-page toggle in backend)
-        $page = $request->getAttribute('frontend.page.information');
-        if ($page !== null) {
-            $pageRecord = $page->getPageRecord() ?? [];
-            if (($pageRecord['tx_x402_paywall_enabled'] ?? false)) {
-                return true;
-            }
+        $pageRecord = $this->requestAttributeResolver->getPageRecord($request);
+        if (ScalarValue::bool($pageRecord['tx_x402_paywall_enabled'] ?? null)) {
+            return true;
         }
 
         return false;
@@ -61,13 +62,10 @@ final class RouteGateResolver
     public function getPrice(ServerRequestInterface $request, PaywallConfiguration $config): string
     {
         // Check page-level price override
-        $page = $request->getAttribute('frontend.page.information');
-        if ($page !== null) {
-            $pageRecord = $page->getPageRecord() ?? [];
-            $pagePrice = $pageRecord['tx_x402_paywall_price'] ?? '';
-            if ($pagePrice !== '' && $pagePrice !== '0') {
-                return $pagePrice;
-            }
+        $pageRecord = $this->requestAttributeResolver->getPageRecord($request);
+        $pagePrice = ScalarValue::string($pageRecord['tx_x402_paywall_price'] ?? null);
+        if ($pagePrice !== '' && $pagePrice !== '0') {
+            return $pagePrice;
         }
 
         return $config->defaultPrice;
@@ -78,10 +76,10 @@ final class RouteGateResolver
      */
     public function getContentDescription(ServerRequestInterface $request): string
     {
-        $page = $request->getAttribute('frontend.page.information');
-        if ($page !== null) {
-            $pageRecord = $page->getPageRecord() ?? [];
-            return $pageRecord['title'] ?? $request->getUri()->getPath();
+        $pageRecord = $this->requestAttributeResolver->getPageRecord($request);
+        $title = ScalarValue::string($pageRecord['title'] ?? null);
+        if ($title !== '') {
+            return $title;
         }
 
         return $request->getUri()->getPath();
@@ -104,20 +102,4 @@ final class RouteGateResolver
         return fnmatch($pattern, $path);
     }
 
-    private function getPageIdFromRequest(ServerRequestInterface $request): ?int
-    {
-        // TYPO3 frontend: page ID from routing
-        $routing = $request->getAttribute('routing');
-        if ($routing !== null && method_exists($routing, 'getPageId')) {
-            return $routing->getPageId();
-        }
-
-        // Fallback: query parameter
-        $params = $request->getQueryParams();
-        if (isset($params['id'])) {
-            return (int)$params['id'];
-        }
-
-        return null;
-    }
 }

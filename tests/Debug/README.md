@@ -2,7 +2,7 @@
 
 ## Option 1: PHPUnit (no blockchain, instant)
 
-Tests `PaymentVerifier` with a mocked Guzzle HTTP client.
+Tests `PaymentVerifier` through TYPO3's HTTP request stack.
 
 ```bash
 composer install

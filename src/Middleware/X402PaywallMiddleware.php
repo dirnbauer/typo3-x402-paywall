@@ -12,13 +12,16 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Psr\Log\LoggerInterface;
 use Webconsulting\X402Paywall\Configuration\ConfigurationProvider;
+use Webconsulting\X402Paywall\Configuration\PaywallConfiguration;
 use Webconsulting\X402Paywall\Domain\Model\PaymentRequirement;
 use Webconsulting\X402Paywall\Event\PaymentReceivedEvent;
 use Webconsulting\X402Paywall\Event\PaymentRequiredEvent;
 use Webconsulting\X402Paywall\Service\ContentTypeResolver;
 use Webconsulting\X402Paywall\Service\PaymentLogger;
 use Webconsulting\X402Paywall\Service\PaymentVerifier;
+use Webconsulting\X402Paywall\Service\RequestAttributeResolver;
 use Webconsulting\X402Paywall\Service\RouteGateResolver;
+use Webconsulting\X402Paywall\Utility\Json;
 use TYPO3\CMS\Core\EventDispatcher\EventDispatcher;
 
 /**
@@ -42,6 +45,7 @@ final class X402PaywallMiddleware implements MiddlewareInterface
         private readonly PaymentVerifier $verifier,
         private readonly PaymentLogger $paymentLogger,
         private readonly ContentTypeResolver $contentTypeResolver,
+        private readonly RequestAttributeResolver $requestAttributeResolver,
         private readonly ResponseFactoryInterface $responseFactory,
         private readonly StreamFactoryInterface $streamFactory,
         private readonly EventDispatcher $eventDispatcher,
@@ -66,18 +70,7 @@ final class X402PaywallMiddleware implements MiddlewareInterface
         $requestUri = (string)$request->getUri();
         $description = $this->gateResolver->getContentDescription($request);
 
-        // Build the payment requirement
-        $requirement = new PaymentRequirement(
-            scheme: 'exact',
-            network: $config->getCaip2NetworkId(),
-            maxAmountRequired: $this->toBaseUnits($price, 6),
-            resource: $requestUri,
-            description: $description,
-            maxTimeoutSeconds: 300,
-            payTo: $config->walletAddress,
-            asset: $this->getAsset($config),
-        );
-
+        $requirement = PaymentRequirement::fromConfig($config, $requestUri, $price, $description);
         $requirementBase64 = $requirement->toHeaderValue();
 
         // Check for payment signature
@@ -102,16 +95,16 @@ final class X402PaywallMiddleware implements MiddlewareInterface
         if (!$verification['valid']) {
             $this->logger->warning('x402: Payment verification failed for {uri}', [
                 'uri' => $requestUri,
-                'error' => $verification['error'] ?? 'unknown',
+                'error' => $verification['error'],
             ]);
 
-            return $this->create402Response($requirement, $requirementBase64, $price, $config, $verification['error'] ?? null);
+            return $this->create402Response($requirement, $requirementBase64, $price, $config, $verification['error']);
         }
 
         // Payment valid → settle and pass through
         $settlement = $this->verifier->settle($paymentSignature, $requirementBase64, $config);
 
-        $pageUid = $this->resolvePageUid($request);
+        $pageUid = $this->requestAttributeResolver->getPageUid($request);
         $contentInfo = $this->contentTypeResolver->resolve($request, $pageUid);
 
         $this->paymentLogger->logPayment(
@@ -144,8 +137,8 @@ final class X402PaywallMiddleware implements MiddlewareInterface
         // Add payment response header to the normal response
         $response = $handler->handle($request);
 
-        if ($settlement['settled'] && isset($settlement['txHash'])) {
-            $paymentResponse = base64_encode(json_encode([
+        if ($settlement['settled'] && $settlement['txHash'] !== '') {
+            $paymentResponse = base64_encode(Json::encode([
                 'scheme' => 'exact',
                 'network' => $config->getCaip2NetworkId(),
                 'txHash' => $settlement['txHash'],
@@ -156,29 +149,11 @@ final class X402PaywallMiddleware implements MiddlewareInterface
         return $response;
     }
 
-    private function resolvePageUid(ServerRequestInterface $request): int
-    {
-        $page = $request->getAttribute('frontend.page.information');
-        if ($page !== null) {
-            $pageRecord = $page->getPageRecord() ?? [];
-            if (isset($pageRecord['uid'])) {
-                return (int)$pageRecord['uid'];
-            }
-        }
-
-        $routing = $request->getAttribute('routing');
-        if ($routing !== null && method_exists($routing, 'getPageId')) {
-            return (int)$routing->getPageId();
-        }
-
-        return 0;
-    }
-
     private function create402Response(
         PaymentRequirement $requirement,
         string $requirementBase64,
         string $price,
-        \Webconsulting\X402Paywall\Configuration\PaywallConfiguration $config,
+        PaywallConfiguration $config,
         ?string $error = null,
     ): ResponseInterface {
         $body = [
@@ -203,37 +178,9 @@ final class X402PaywallMiddleware implements MiddlewareInterface
         $response = $response->withHeader(self::HEADER_PAYMENT_REQUIRED, $requirementBase64);
         $response = $response->withHeader('Content-Type', 'application/json');
         $response = $response->withBody(
-            $this->streamFactory->createStream(json_encode($body, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR))
+            $this->streamFactory->createStream(Json::encode($body, JSON_PRETTY_PRINT))
         );
 
         return $response;
-    }
-
-    private function toBaseUnits(string $amount, int $decimals): string
-    {
-        $parts = explode('.', $amount, 2);
-        $integer = $parts[0];
-        $fraction = str_pad($parts[1] ?? '', $decimals, '0');
-        $fraction = substr($fraction, 0, $decimals);
-        return ltrim($integer . $fraction, '0') ?: '0';
-    }
-
-    /**
-     * @return array{address: string, symbol: string, decimals: int}
-     */
-    private function getAsset(\Webconsulting\X402Paywall\Configuration\PaywallConfiguration $config): array
-    {
-        $usdcAddresses = [
-            'base' => '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-            'base-sepolia' => '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
-            'polygon' => '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
-            'ethereum' => '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-        ];
-
-        return [
-            'address' => $usdcAddresses[$config->network] ?? $usdcAddresses['base-sepolia'],
-            'symbol' => $config->currency,
-            'decimals' => 6,
-        ];
     }
 }

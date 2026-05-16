@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace Webconsulting\X402Paywall\Controller;
 
-use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Exception\GuzzleException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
+use TYPO3\CMS\Core\Http\RequestFactory;
 use TYPO3\CMS\Core\Http\JsonResponse;
-use TYPO3\CMS\Core\Page\PageRenderer;
 use TYPO3\CMS\Core\Site\SiteFinder;
 use Webconsulting\X402Paywall\Service\PaymentLogger;
+use Webconsulting\X402Paywall\Utility\Json;
 
 /**
  * Backend module controller for x402 payment dashboard.
@@ -22,8 +21,7 @@ final readonly class PaywallDashboardController
     public function __construct(
         private ModuleTemplateFactory $moduleTemplateFactory,
         private PaymentLogger $paymentLogger,
-        private PageRenderer $pageRenderer,
-        private ClientInterface $httpClient,
+        private RequestFactory $requestFactory,
         private SiteFinder $siteFinder,
     ) {}
 
@@ -31,11 +29,15 @@ final readonly class PaywallDashboardController
     {
         $moduleTemplate = $this->moduleTemplateFactory->create($request);
 
-        $stats30d = $this->paymentLogger->getStats(strtotime('-30 days') ?: 0);
-        $stats7d = $this->paymentLogger->getStats(strtotime('-7 days') ?: 0);
-        $statsToday = $this->paymentLogger->getStats(strtotime('today') ?: 0);
+        $thirtyDaysAgo = $this->timestamp('-30 days');
+        $sevenDaysAgo = $this->timestamp('-7 days');
+        $today = $this->timestamp('today');
+
+        $stats30d = $this->paymentLogger->getStats($thirtyDaysAgo);
+        $stats7d = $this->paymentLogger->getStats($sevenDaysAgo);
+        $statsToday = $this->paymentLogger->getStats($today);
         $statsAll = $this->paymentLogger->getStats();
-        $topPages = $this->paymentLogger->getTopPages(10, strtotime('-30 days') ?: 0);
+        $topPages = $this->paymentLogger->getTopPages(10, $thirtyDaysAgo);
         $recentTx = $this->paymentLogger->getRecentTransactions(20);
 
         $moduleTemplate->assignMultiple([
@@ -119,9 +121,14 @@ final readonly class PaywallDashboardController
      */
     public function runSimulationAction(ServerRequestInterface $request): ResponseInterface
     {
-        $body = json_decode((string)$request->getBody(), true) ?? [];
-        $url = trim($body['url'] ?? '');
-        $signatureMode = $body['signature'] ?? '';
+        try {
+            $body = Json::decodeObject((string)$request->getBody());
+        } catch (\JsonException) {
+            return new JsonResponse(['error' => 'Invalid JSON body'], 400);
+        }
+
+        $url = $this->nonEmptyString($body['url'] ?? null);
+        $signatureMode = $this->nonEmptyString($body['signature'] ?? null);
 
         if ($url === '') {
             return new JsonResponse(['error' => 'No URL provided'], 400);
@@ -133,7 +140,7 @@ final readonly class PaywallDashboardController
         ];
 
         if ($signatureMode === 'mock') {
-            $mockPayload = base64_encode(json_encode([
+            $mockPayload = base64_encode(Json::encode([
                 'from' => '0x0000000000000000000000000000000000000001',
                 'signature' => '0x' . str_repeat('ab', 65),
                 'network' => 'eip155:84532',
@@ -147,7 +154,11 @@ final readonly class PaywallDashboardController
         try {
             $steps[] = ['type' => 'send', 'message' => 'GET ' . $url, 'ms' => 0];
 
-            $response = $this->httpClient->request('GET', $url, [
+            if (!$this->isAllowedHttpUrl($url)) {
+                return new JsonResponse(['error' => 'Only http and https URLs are supported'], 400);
+            }
+
+            $response = $this->requestFactory->request($url, 'GET', [
                 'headers' => $headers,
                 'timeout' => 10,
                 'allow_redirects' => false,
@@ -165,13 +176,15 @@ final readonly class PaywallDashboardController
             $steps[] = ['type' => 'receive', 'message' => "← {$statusCode} (" . $elapsed . 'ms)', 'ms' => $elapsed];
 
             $decodedRequirement = null;
-            $paymentHeader = $response->getHeaderLine('PAYMENT-REQUIRED')
-                ?: $response->getHeaderLine('X-PAYMENT-REQUIRED');
+            $paymentHeader = $response->getHeaderLine('PAYMENT-REQUIRED');
+            if ($paymentHeader === '') {
+                $paymentHeader = $response->getHeaderLine('X-PAYMENT-REQUIRED');
+            }
 
             if ($paymentHeader !== '') {
                 $decoded = base64_decode($paymentHeader, true);
                 if ($decoded !== false) {
-                    $decodedRequirement = json_decode($decoded, true);
+                    $decodedRequirement = Json::decodeObject($decoded);
                     $steps[] = ['type' => 'info', 'message' => '📋 Payment requirement decoded', 'ms' => $elapsed];
                 }
             }
@@ -191,7 +204,7 @@ final readonly class PaywallDashboardController
                 'elapsed' => $elapsed,
                 'signatureMode' => $signatureMode,
             ]);
-        } catch (GuzzleException $e) {
+        } catch (\Throwable $e) {
             $elapsed = (int)((microtime(true) - $startTime) * 1000);
             $steps[] = ['type' => 'error', 'message' => '✗ ' . $e->getMessage(), 'ms' => $elapsed];
 
@@ -212,16 +225,41 @@ final readonly class PaywallDashboardController
         $period = $request->getQueryParams()['period'] ?? '30days';
 
         $since = match ($period) {
-            'today' => strtotime('today'),
-            '7days' => strtotime('-7 days'),
-            '30days' => strtotime('-30 days'),
+            'today' => $this->timestamp('today'),
+            '7days' => $this->timestamp('-7 days'),
+            '30days' => $this->timestamp('-30 days'),
             default => 0,
         };
 
         return new JsonResponse([
-            'stats' => $this->paymentLogger->getStats($since ?: 0),
-            'topPages' => $this->paymentLogger->getTopPages(10, $since ?: 0),
+            'stats' => $this->paymentLogger->getStats($since),
+            'topPages' => $this->paymentLogger->getTopPages(10, $since),
             'recentTransactions' => $this->paymentLogger->getRecentTransactions(10),
         ]);
+    }
+
+    private function isAllowedHttpUrl(string $url): bool
+    {
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+
+        return $scheme === 'http' || $scheme === 'https';
+    }
+
+    private function timestamp(string $modifier): int
+    {
+        $timestamp = strtotime($modifier);
+
+        return $timestamp === false ? 0 : $timestamp;
+    }
+
+    private function nonEmptyString(mixed $value, string $default = ''): string
+    {
+        if (!is_scalar($value)) {
+            return $default;
+        }
+
+        $stringValue = trim((string)$value);
+
+        return $stringValue !== '' ? $stringValue : $default;
     }
 }

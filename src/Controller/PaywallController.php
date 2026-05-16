@@ -8,9 +8,12 @@ use Psr\Http\Message\ResponseInterface;
 use TYPO3\CMS\Core\Http\JsonResponse;
 use TYPO3\CMS\Extbase\Mvc\Controller\ActionController;
 use Webconsulting\X402Paywall\Configuration\ConfigurationProvider;
+use Webconsulting\X402Paywall\Domain\Model\PaymentRequirement;
 use Webconsulting\X402Paywall\Service\ContentTypeResolver;
 use Webconsulting\X402Paywall\Service\PaymentLogger;
 use Webconsulting\X402Paywall\Service\PaymentVerifier;
+use Webconsulting\X402Paywall\Service\RequestAttributeResolver;
+use Webconsulting\X402Paywall\Utility\Json;
 
 /**
  * Frontend plugin controller for x402 paywall.
@@ -25,6 +28,7 @@ class PaywallController extends ActionController
         private readonly PaymentVerifier $verifier,
         private readonly PaymentLogger $paymentLogger,
         private readonly ContentTypeResolver $contentTypeResolver,
+        private readonly RequestAttributeResolver $requestAttributeResolver,
     ) {}
 
     /**
@@ -41,8 +45,7 @@ class PaywallController extends ActionController
         }
 
         // Check if current page is gated
-        $pageInfo = $this->request->getAttribute('frontend.page.information');
-        $pageRecord = $pageInfo?->getPageRecord() ?? [];
+        $pageRecord = $this->requestAttributeResolver->getPageRecord($this->request);
         $isGated = (bool)($pageRecord['tx_x402_paywall_enabled'] ?? false);
 
         if (!$isGated) {
@@ -50,20 +53,19 @@ class PaywallController extends ActionController
             return $this->htmlResponse();
         }
 
-        $price = ($pageRecord['tx_x402_paywall_price'] ?? '') ?: $config->defaultPrice;
-        $description = ($pageRecord['tx_x402_paywall_description'] ?? '') ?: ($pageRecord['title'] ?? '');
+        $price = $this->nonEmptyString($pageRecord['tx_x402_paywall_price'] ?? null, $config->defaultPrice);
+        $description = $this->nonEmptyString(
+            $pageRecord['tx_x402_paywall_description'] ?? null,
+            $this->nonEmptyString($pageRecord['title'] ?? null, ''),
+        );
 
         // Build payment requirement for the frontend JavaScript
-        $paymentRequirement = [
-            'scheme' => 'exact',
-            'network' => $config->getCaip2NetworkId(),
-            'maxAmountRequired' => $this->toBaseUnits($price, 6),
-            'resource' => (string)$this->request->getUri(),
-            'description' => $description,
-            'maxTimeoutSeconds' => 300,
-            'payTo' => $config->walletAddress,
-            'asset' => $this->getAsset($config),
-        ];
+        $paymentRequirement = PaymentRequirement::fromConfig(
+            $config,
+            (string)$this->request->getUri(),
+            $price,
+            $description,
+        );
 
         $this->view->assignMultiple([
             'paywallActive' => true,
@@ -73,8 +75,8 @@ class PaywallController extends ActionController
             'network' => $config->network,
             'networkLabel' => $this->getNetworkLabel($config->network),
             'freePreviewParagraphs' => $config->freePreviewParagraphs,
-            'paymentRequirement' => json_encode($paymentRequirement),
-            'paymentRequirementBase64' => base64_encode(json_encode($paymentRequirement)),
+            'paymentRequirement' => Json::encode($paymentRequirement->toArray()),
+            'paymentRequirementBase64' => $paymentRequirement->toHeaderValue(),
             'verifyEndpoint' => '/x402/verify',
             'pageUid' => $pageRecord['uid'] ?? 0,
         ]);
@@ -88,12 +90,16 @@ class PaywallController extends ActionController
     public function verifyAction(): ResponseInterface
     {
         $config = $this->configProvider->getFromRequest($this->request);
-        $body = json_decode((string)$this->request->getBody(), true);
+        try {
+            $body = Json::decodeObject((string)$this->request->getBody());
+        } catch (\JsonException) {
+            return new JsonResponse(['valid' => false, 'error' => 'Invalid payment data'], 400);
+        }
 
-        $paymentSignature = $body['paymentSignature'] ?? '';
-        $paymentRequirement = $body['paymentRequirement'] ?? '';
+        $paymentSignature = $this->nonEmptyString($body['paymentSignature'] ?? null);
+        $paymentRequirement = $this->nonEmptyString($body['paymentRequirement'] ?? null);
 
-        if (!$paymentSignature || !$paymentRequirement) {
+        if ($paymentSignature === '' || $paymentRequirement === '') {
             return new JsonResponse(['valid' => false, 'error' => 'Missing payment data'], 400);
         }
 
@@ -103,15 +109,13 @@ class PaywallController extends ActionController
             // Settle the payment
             $settlement = $this->verifier->settle($paymentSignature, $paymentRequirement, $config);
 
-            $pageInfo = $this->request->getAttribute('frontend.page.information');
-            $pageRecord = $pageInfo?->getPageRecord() ?? [];
-            $pageUid = (int)($pageRecord['uid'] ?? 0);
+            $pageUid = $this->requestAttributeResolver->getPageUid($this->request);
             $contentInfo = $this->contentTypeResolver->resolve($this->request, $pageUid);
 
             $this->paymentLogger->logPayment(
                 request: $this->request,
                 pageUid: $pageUid,
-                amount: $body['price'] ?? $config->defaultPrice,
+                amount: $this->nonEmptyString($body['price'] ?? null, $config->defaultPrice),
                 currency: $config->currency,
                 network: $config->network,
                 txHash: $settlement['txHash'] ?? null,
@@ -128,35 +132,7 @@ class PaywallController extends ActionController
             ]);
         }
 
-        return new JsonResponse(['valid' => false, 'error' => $result['error'] ?? 'Verification failed'], 402);
-    }
-
-    private function toBaseUnits(string $amount, int $decimals): string
-    {
-        $parts = explode('.', $amount, 2);
-        $integer = $parts[0];
-        $fraction = str_pad($parts[1] ?? '', $decimals, '0');
-        $fraction = substr($fraction, 0, $decimals);
-        return ltrim($integer . $fraction, '0') ?: '0';
-    }
-
-    /**
-     * @return array{address: string, symbol: string, decimals: int}
-     */
-    private function getAsset(\Webconsulting\X402Paywall\Configuration\PaywallConfiguration $config): array
-    {
-        $usdcAddresses = [
-            'base' => '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-            'base-sepolia' => '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
-            'polygon' => '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
-            'ethereum' => '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-        ];
-
-        return [
-            'address' => $usdcAddresses[$config->network] ?? $usdcAddresses['base-sepolia'],
-            'symbol' => $config->currency,
-            'decimals' => 6,
-        ];
+        return new JsonResponse(['valid' => false, 'error' => $result['error']], 402);
     }
 
     private function getNetworkLabel(string $network): string
@@ -168,5 +144,16 @@ class PaywallController extends ActionController
             'ethereum' => 'Ethereum',
             default => $network,
         };
+    }
+
+    private function nonEmptyString(mixed $value, string $default = ''): string
+    {
+        if (!is_scalar($value)) {
+            return $default;
+        }
+
+        $stringValue = (string)$value;
+
+        return $stringValue !== '' ? $stringValue : $default;
     }
 }

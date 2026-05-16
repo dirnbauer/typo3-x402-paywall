@@ -21,13 +21,7 @@ services:
 
   Webconsulting\X402Paywall\Service\PaymentVerifier:
     arguments:
-      $httpClient: '@GuzzleHttp\ClientInterface'
-
-  GuzzleHttp\ClientInterface:
-    class: GuzzleHttp\Client
-    arguments:
-      - timeout: 30
-        verify: true
+      $requestFactory: '@TYPO3\CMS\Core\Http\RequestFactory'
 
   # ── x402 MCP Tools ──────────────────────────────────────────────────────────
   # Registered for hn/typo3-mcp-server (tag: mcp.tool).
@@ -37,7 +31,7 @@ services:
   Webconsulting\X402Paywall\Mcp\Tool\X402ProbeTool:
     public: true
     arguments:
-      $httpClient: '@GuzzleHttp\ClientInterface'
+      $requestFactory: '@TYPO3\CMS\Core\Http\RequestFactory'
     tags:
       - name: mcp.tool
 

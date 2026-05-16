@@ -1,6 +1,6 @@
 {
     "name": "webconsulting/typo3-x402-paywall",
-    "description": "x402 payment protocol for TYPO3 — charge AI agents and users for content access via HTTP 402.",
+    "description": "x402 Paywall - HTTP 402 payment protocol for TYPO3 14 content monetization.",
     "type": "typo3-cms-extension",
     "license": "GPL-2.0-or-later",
     "keywords": [
@@ -29,17 +29,23 @@
     },
     "require": {
         "php": "^8.2",
-        "typo3/cms-core": "^13.4 || ^14.0",
-        "typo3/cms-frontend": "^13.4 || ^14.0",
-        "guzzlehttp/guzzle": "^7.0",
+        "typo3/cms-backend": "^14.3",
+        "typo3/cms-core": "^14.3",
+        "typo3/cms-extbase": "^14.3",
+        "typo3/cms-fluid": "^14.3",
+        "typo3/cms-frontend": "^14.3",
         "mcp/sdk": "^0.5",
         "psr/http-message": "^2.0",
         "psr/http-server-middleware": "^1.0"
     },
     "require-dev": {
-        "phpunit/phpunit": "^11.0",
-        "phpstan/phpstan": "^2.0",
-        "friendsofphp/php-cs-fixer": "^3.0"
+        "friendsofphp/php-cs-fixer": "^3.92",
+        "phpstan/extension-installer": "^1.4",
+        "phpstan/phpstan": "^2.1.33",
+        "phpstan/phpstan-phpunit": "^2.0",
+        "phpstan/phpstan-strict-rules": "^2.0",
+        "phpunit/phpunit": "^11.5",
+        "saschaegerer/phpstan-typo3": "^3.0"
     },
     "autoload": {
         "psr-4": {
@@ -51,14 +57,25 @@
             "Webconsulting\\X402Paywall\\Tests\\": "tests/"
         }
     },
+    "scripts": {
+        "ci": "Build/Scripts/runTests.sh -s ci",
+        "lint": "Build/Scripts/runTests.sh -s lint",
+        "phpstan": "Build/Scripts/runTests.sh -s phpstan",
+        "test": "Build/Scripts/runTests.sh -s unit"
+    },
     "extra": {
         "typo3/cms": {
-            "extension-key": "x402_paywall"
+            "extension-key": "x402_paywall",
+            "version": "2.0.0",
+            "Package": {
+                "providesPackages": {}
+            }
         }
     },
     "config": {
         "sort-packages": true,
         "allow-plugins": {
+            "phpstan/extension-installer": true,
             "typo3/cms-composer-installers": true,
             "typo3/class-alias-loader": true
         }

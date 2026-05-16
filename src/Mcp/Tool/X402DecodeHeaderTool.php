@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Webconsulting\X402Paywall\Mcp\Tool;
 
+use Webconsulting\X402Paywall\Utility\Json;
+
 /**
  * MCP Tool: decode a raw PAYMENT-REQUIRED header value.
  *
@@ -60,31 +62,30 @@ final class X402DecodeHeaderTool extends AbstractMcpTool
      */
     protected function doExecute(array $args): string
     {
-        $header = trim((string)($args['header'] ?? ''));
+        $header = $this->stringValue($args['header'] ?? null);
 
         if ($header === '') {
-            return json_encode(['error' => 'header is required']);
+            return Json::encode(['error' => 'header is required']);
         }
 
         $decoded = base64_decode($header, true);
         if ($decoded === false) {
-            return json_encode(['error' => 'Invalid base64 encoding']);
+            return Json::encode(['error' => 'Invalid base64 encoding']);
         }
 
-        $requirement = json_decode($decoded, true);
-        if (!is_array($requirement)) {
-            return json_encode(['error' => 'Decoded value is not valid JSON']);
-        }
+        $requirement = Json::decodeObject($decoded);
 
         // Humanize the amount if we have asset info
         $humanAmount = null;
-        $decimals = (int)($requirement['asset']['decimals'] ?? 6);
+        $asset = $requirement['asset'] ?? [];
+        $decimals = is_array($asset) ? $this->intValue($asset['decimals'] ?? null, 6) : 6;
         if (isset($requirement['maxAmountRequired'])) {
-            $raw = (int)$requirement['maxAmountRequired'];
-            $humanAmount = number_format($raw / (10 ** $decimals), $decimals) . ' ' . ($requirement['asset']['symbol'] ?? 'USDC');
+            $raw = $this->intValue($requirement['maxAmountRequired']);
+            $symbol = is_array($asset) ? $this->stringValue($asset['symbol'] ?? null, 'USDC') : 'USDC';
+            $humanAmount = number_format($raw / (10 ** $decimals), $decimals) . ' ' . $symbol;
         }
 
-        return json_encode([
+        return Json::encode([
             'decoded' => $requirement,
             'human' => [
                 'price' => $humanAmount,
@@ -95,5 +96,21 @@ final class X402DecodeHeaderTool extends AbstractMcpTool
                 'timeout_seconds' => $requirement['maxTimeoutSeconds'] ?? null,
             ],
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    }
+
+    private function stringValue(mixed $value, string $default = ''): string
+    {
+        if (!is_scalar($value)) {
+            return $default;
+        }
+
+        $stringValue = trim((string)$value);
+
+        return $stringValue !== '' ? $stringValue : $default;
+    }
+
+    private function intValue(mixed $value, int $default = 0): int
+    {
+        return is_scalar($value) ? (int)$value : $default;
     }
 }

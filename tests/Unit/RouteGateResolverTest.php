@@ -7,7 +7,9 @@ namespace Webconsulting\X402Paywall\Tests\Unit;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\UriInterface;
+use TYPO3\CMS\Core\Routing\PageArguments;
 use Webconsulting\X402Paywall\Configuration\PaywallConfiguration;
+use Webconsulting\X402Paywall\Service\RequestAttributeResolver;
 use Webconsulting\X402Paywall\Service\RouteGateResolver;
 
 final class RouteGateResolverTest extends TestCase
@@ -16,7 +18,7 @@ final class RouteGateResolverTest extends TestCase
 
     protected function setUp(): void
     {
-        $this->resolver = new RouteGateResolver();
+        $this->resolver = new RouteGateResolver(new RequestAttributeResolver());
     }
 
     public function testDisabledConfigNeverGates(): void
@@ -85,7 +87,7 @@ final class RouteGateResolverTest extends TestCase
             'gated_page_uids' => [42, 100],
         ]);
 
-        $request = $this->createRequest('/', ['id' => '42']);
+        $request = $this->createRequest('/', routing: new PageArguments(42, '0', []));
         self::assertTrue($this->resolver->isGated($request, $config));
     }
 
@@ -101,7 +103,10 @@ final class RouteGateResolverTest extends TestCase
         self::assertSame('0.05', $this->resolver->getPrice($request, $config));
     }
 
-    private function createRequest(string $path, array $queryParams = []): ServerRequestInterface
+    /**
+     * @param array<string, mixed> $queryParams
+     */
+    private function createRequest(string $path, array $queryParams = [], ?PageArguments $routing = null): ServerRequestInterface
     {
         $uri = $this->createMock(UriInterface::class);
         $uri->method('getPath')->willReturn($path);
@@ -110,7 +115,9 @@ final class RouteGateResolverTest extends TestCase
         $request = $this->createMock(ServerRequestInterface::class);
         $request->method('getUri')->willReturn($uri);
         $request->method('getQueryParams')->willReturn($queryParams);
-        $request->method('getAttribute')->willReturn(null);
+        $request->method('getAttribute')->willReturnCallback(
+            static fn(string $name, mixed $default = null): mixed => $name === 'routing' ? $routing : $default,
+        );
 
         return $request;
     }

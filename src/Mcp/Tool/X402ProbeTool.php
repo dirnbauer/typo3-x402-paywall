@@ -4,8 +4,9 @@ declare(strict_types=1);
 
 namespace Webconsulting\X402Paywall\Mcp\Tool;
 
-use GuzzleHttp\ClientInterface;
-use GuzzleHttp\Exception\GuzzleException;
+use TYPO3\CMS\Core\Http\RequestFactory;
+use Webconsulting\X402Paywall\Utility\Json;
+use Webconsulting\X402Paywall\Utility\ScalarValue;
 
 /**
  * MCP Tool: probe any URL for x402 payment requirements.
@@ -20,7 +21,7 @@ use GuzzleHttp\Exception\GuzzleException;
 final class X402ProbeTool extends AbstractMcpTool
 {
     public function __construct(
-        private readonly ClientInterface $httpClient,
+        private readonly RequestFactory $requestFactory,
     ) {}
 
     public function getName(): string
@@ -66,14 +67,18 @@ final class X402ProbeTool extends AbstractMcpTool
      */
     protected function doExecute(array $args): string
     {
-        $url = (string)($args['url'] ?? '');
+        $url = ScalarValue::string($args['url'] ?? null);
 
         if ($url === '') {
-            return json_encode(['error' => 'url is required']);
+            return Json::encode(['error' => 'url is required']);
+        }
+
+        if (!$this->isAllowedHttpUrl($url)) {
+            return Json::encode(['error' => 'Only http and https URLs are supported']);
         }
 
         try {
-            $response = $this->httpClient->request('GET', $url, [
+            $response = $this->requestFactory->request($url, 'GET', [
                 'headers' => ['Accept' => 'application/json', 'User-Agent' => 'x402-mcp-tool/1.0'],
                 'timeout' => 10,
                 'allow_redirects' => false,
@@ -84,26 +89,31 @@ final class X402ProbeTool extends AbstractMcpTool
             $result = ['url' => $url, 'status' => $status];
 
             if ($status === 402) {
-                $paymentHeader = $response->getHeaderLine('PAYMENT-REQUIRED')
-                    ?: $response->getHeaderLine('X-PAYMENT-REQUIRED');
+                $paymentHeader = $response->getHeaderLine('PAYMENT-REQUIRED');
+                if ($paymentHeader === '') {
+                    $paymentHeader = $response->getHeaderLine('X-PAYMENT-REQUIRED');
+                }
 
                 if ($paymentHeader !== '') {
                     $decoded = base64_decode($paymentHeader, true);
                     if ($decoded !== false) {
-                        $requirement = json_decode($decoded, true);
+                        $requirement = Json::decodeObject($decoded);
+                        $amountRequired = ScalarValue::string($requirement['maxAmountRequired'] ?? null, '?');
+                        $network = ScalarValue::string($requirement['network'] ?? null, '?');
+                        $payTo = ScalarValue::string($requirement['payTo'] ?? null);
                         $result['paywall'] = true;
                         $result['requirement'] = $requirement;
                         $result['summary'] = sprintf(
                             'Page requires payment: %s %s on %s. Pay to: %s',
-                            ($requirement['maxAmountRequired'] ?? '?'),
+                            $amountRequired,
                             'USDC',
-                            $requirement['network'] ?? '?',
-                            substr((string)($requirement['payTo'] ?? ''), 0, 10) . '...',
+                            $network,
+                            substr($payTo, 0, 10) . '...',
                         );
                     }
                 }
 
-                $body = json_decode((string)$response->getBody(), true);
+                $body = Json::decodeObject((string)$response->getBody());
                 if (isset($body['human_readable'])) {
                     $result['humanReadable'] = $body['human_readable'];
                 }
@@ -114,9 +124,16 @@ final class X402ProbeTool extends AbstractMcpTool
                 $result['summary'] = 'Unexpected HTTP status: ' . $status;
             }
 
-            return json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-        } catch (GuzzleException $e) {
-            return json_encode(['error' => 'Request failed: ' . $e->getMessage()]);
+            return Json::encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        } catch (\Throwable $e) {
+            return Json::encode(['error' => 'Request failed: ' . $e->getMessage()]);
         }
+    }
+
+    private function isAllowedHttpUrl(string $url): bool
+    {
+        $scheme = parse_url($url, PHP_URL_SCHEME);
+
+        return $scheme === 'http' || $scheme === 'https';
     }
 }

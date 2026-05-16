@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace Webconsulting\X402Paywall\Tests\Unit;
 
-use GuzzleHttp\Client;
-use GuzzleHttp\Handler\MockHandler;
-use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Psr7\Response;
 use PHPUnit\Framework\TestCase;
 use Psr\Log\NullLogger;
+use TYPO3\CMS\Core\Http\RequestFactory;
 use Webconsulting\X402Paywall\Configuration\PaywallConfiguration;
 use Webconsulting\X402Paywall\Service\PaymentVerifier;
+use Webconsulting\X402Paywall\Utility\Json;
 
 final class PaymentVerifierTest extends TestCase
 {
@@ -31,7 +30,7 @@ final class PaymentVerifierTest extends TestCase
     public function testVerifyReturnsTrueWhenFacilitatorAccepts(): void
     {
         $verifier = $this->makeVerifier([
-            new Response(200, [], json_encode(['valid' => true, 'details' => []])),
+            new Response(200, [], Json::encode(['valid' => true, 'details' => []])),
         ]);
 
         $result = $verifier->verify('mock-signature-b64', 'mock-requirement-b64', $this->config);
@@ -42,7 +41,7 @@ final class PaymentVerifierTest extends TestCase
     public function testVerifyReturnsFalseWhenFacilitatorRejects(): void
     {
         $verifier = $this->makeVerifier([
-            new Response(200, [], json_encode(['valid' => false, 'error' => 'Insufficient funds'])),
+            new Response(200, [], Json::encode(['valid' => false, 'error' => 'Insufficient funds'])),
         ]);
 
         $result = $verifier->verify('mock-signature-b64', 'mock-requirement-b64', $this->config);
@@ -54,7 +53,7 @@ final class PaymentVerifierTest extends TestCase
     public function testVerifyReturnsFalseOnFacilitatorError(): void
     {
         $verifier = $this->makeVerifier([
-            new Response(500, [], json_encode(['message' => 'Internal server error'])),
+            new Response(500, [], Json::encode(['message' => 'Internal server error'])),
         ]);
 
         $result = $verifier->verify('mock-signature-b64', 'mock-requirement-b64', $this->config);
@@ -66,7 +65,7 @@ final class PaymentVerifierTest extends TestCase
     {
         $txHash = '0xdeadbeef1234567890abcdef';
         $verifier = $this->makeVerifier([
-            new Response(200, [], json_encode(['settled' => true, 'txHash' => $txHash])),
+            new Response(200, [], Json::encode(['settled' => true, 'txHash' => $txHash])),
         ]);
 
         $result = $verifier->settle('mock-signature-b64', 'mock-requirement-b64', $this->config);
@@ -78,7 +77,7 @@ final class PaymentVerifierTest extends TestCase
     public function testSettleReturnsFalseOnFailure(): void
     {
         $verifier = $this->makeVerifier([
-            new Response(200, [], json_encode(['settled' => false, 'error' => 'Already settled'])),
+            new Response(200, [], Json::encode(['settled' => false, 'error' => 'Already settled'])),
         ]);
 
         $result = $verifier->settle('mock-signature-b64', 'mock-requirement-b64', $this->config);
@@ -105,10 +104,16 @@ final class PaymentVerifierTest extends TestCase
         self::assertFalse($verifier->testConnection($this->config));
     }
 
+    /**
+     * @param list<Response> $responses
+     */
     private function makeVerifier(array $responses): PaymentVerifier
     {
-        $mock = new MockHandler($responses);
-        $client = new Client(['handler' => HandlerStack::create($mock)]);
-        return new PaymentVerifier($client, new NullLogger());
+        $requestFactory = $this->createMock(RequestFactory::class);
+        $requestFactory
+            ->method('request')
+            ->willReturnOnConsecutiveCalls(...$responses);
+
+        return new PaymentVerifier($requestFactory, new NullLogger());
     }
 }

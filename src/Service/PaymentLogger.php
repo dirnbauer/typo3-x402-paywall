@@ -5,7 +5,11 @@ declare(strict_types=1);
 namespace Webconsulting\X402Paywall\Service;
 
 use Psr\Http\Message\ServerRequestInterface;
+use TYPO3\CMS\Core\Crypto\HashAlgo;
+use TYPO3\CMS\Core\Crypto\HashService;
 use TYPO3\CMS\Core\Database\ConnectionPool;
+use Webconsulting\X402Paywall\Utility\Json;
+use Webconsulting\X402Paywall\Utility\ScalarValue;
 
 /**
  * Logs x402 payment transactions for revenue analytics.
@@ -14,6 +18,7 @@ final class PaymentLogger
 {
     public function __construct(
         private readonly ConnectionPool $connectionPool,
+        private readonly HashService $hashService,
     ) {}
 
     /**
@@ -46,10 +51,10 @@ final class PaymentLogger
             'network' => $network,
             'tx_hash' => $txHash ?? '',
             'payer_address' => $this->extractPayerAddress($request),
-            'facilitator_response' => !empty($settlementDetails) ? json_encode($settlementDetails) : '',
+            'facilitator_response' => $settlementDetails !== [] ? Json::encode($settlementDetails) : '',
             'status' => $status,
             'user_agent' => substr($request->getHeaderLine('User-Agent'), 0, 500),
-            'ip_hash' => hash('sha256', $request->getServerParams()['REMOTE_ADDR'] ?? ''),
+            'ip_hash' => $this->hashIpAddress(ScalarValue::string($request->getServerParams()['REMOTE_ADDR'] ?? null)),
         ]);
     }
 
@@ -72,10 +77,13 @@ final class PaymentLogger
         }
 
         $row = $queryBuilder->executeQuery()->fetchAssociative();
+        if (!is_array($row)) {
+            $row = [];
+        }
 
         return [
-            'total_transactions' => (int)($row['cnt'] ?? 0),
-            'total_revenue' => round((float)($row['revenue'] ?? 0), 6),
+            'total_transactions' => ScalarValue::int($row['cnt'] ?? null),
+            'total_revenue' => round(ScalarValue::float($row['revenue'] ?? null), 6),
             'period_start' => $since > 0 ? date('Y-m-d', $since) : 'all time',
         ];
     }
@@ -133,7 +141,21 @@ final class PaymentLogger
             return '';
         }
 
-        $payload = json_decode($decoded, true);
-        return (string)($payload['from'] ?? $payload['payer'] ?? '');
+        try {
+            $payload = Json::decodeObject($decoded);
+        } catch (\JsonException) {
+            return '';
+        }
+
+        return ScalarValue::string($payload['from'] ?? ($payload['payer'] ?? null));
+    }
+
+    private function hashIpAddress(string $ipAddress): string
+    {
+        if ($ipAddress === '') {
+            return '';
+        }
+
+        return $this->hashService->hmac($ipAddress, 'x402-paywall-ip-log', HashAlgo::SHA3_256);
     }
 }

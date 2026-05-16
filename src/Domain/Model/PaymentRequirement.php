@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Webconsulting\X402Paywall\Domain\Model;
 
+use Webconsulting\X402Paywall\Utility\Json;
+
 /**
  * Represents the x402 payment requirement returned in a 402 response.
  * Follows the x402 V2 specification.
@@ -20,7 +22,7 @@ final class PaymentRequirement
         public readonly int $maxTimeoutSeconds = 300,
         public readonly string $payTo = '',
         /** @var array{address: string, symbol: string, decimals: int} */
-        public readonly array $asset = [],
+        public readonly array $asset = ['address' => '', 'symbol' => '', 'decimals' => 0],
         public readonly ?int $outputLength = null,
     ) {}
 
@@ -35,7 +37,7 @@ final class PaymentRequirement
             network: $config->getCaip2NetworkId(),
             maxAmountRequired: self::toBaseUnits($price, 6), // USDC = 6 decimals
             resource: $requestUri,
-            description: $contentDescription ?: "Access to $requestUri",
+            description: $contentDescription !== '' ? $contentDescription : "Access to $requestUri",
             mimeType: 'application/json',
             maxTimeoutSeconds: 300,
             payTo: $config->getWalletAddress(),
@@ -48,7 +50,7 @@ final class PaymentRequirement
      */
     public function toHeaderValue(): string
     {
-        return base64_encode(json_encode($this->toArray(), JSON_THROW_ON_ERROR));
+        return base64_encode(Json::encode($this->toArray()));
     }
 
     /**
@@ -84,7 +86,9 @@ final class PaymentRequirement
         $fraction = str_pad($parts[1] ?? '', $decimals, '0');
         $fraction = substr($fraction, 0, $decimals);
 
-        return ltrim($integer . $fraction, '0') ?: '0';
+        $baseUnits = ltrim($integer . $fraction, '0');
+
+        return $baseUnits !== '' ? $baseUnits : '0';
     }
 
     /**
@@ -116,4 +120,3 @@ final class PaymentRequirement
         };
     }
 }
-

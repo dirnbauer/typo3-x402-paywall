@@ -4,8 +4,8 @@
 
 Uses the HTTP 402 Payment Required standard to enable pay-per-request content monetization — no subscriptions, no accounts, no payment gateway integration needed.
 
-[![TYPO3 v13](https://img.shields.io/badge/TYPO3-v13.4-orange.svg)](https://get.typo3.org/13)
-[![TYPO3 v14](https://img.shields.io/badge/TYPO3-v14-orange.svg)](https://get.typo3.org/14)
+[![TYPO3 v14](https://img.shields.io/badge/TYPO3-v14.3-orange.svg)](https://get.typo3.org/14)
+[![PHPStan](https://img.shields.io/badge/PHPStan-level%20max-blue.svg)](phpstan.neon)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue.svg)](LICENSE)
 
 ## What is x402?
@@ -38,8 +38,10 @@ TYPO3 ──200 + content────────────▶ Client
 - **Frontend plugin** — renders a paywall overlay with wallet payment UI for traditional TYPO3 sites
 - **Backend dashboard** — revenue analytics with today/7d/30d/all-time stats, top pages, and recent transactions
 - **Next.js components** — React hook, overlay component, and middleware for headless setups (`@webconsulting/typo3-x402-react`)
+- **MCP tools** — gated-page discovery, x402 probing, header decoding, stats, and transaction inspection for agent workflows
 - **PSR-14 events** — `PaymentRequiredEvent` and `PaymentReceivedEvent` for custom integrations
 - **Payment log** — all transactions stored in `tx_x402_payment_log` for analytics
+- **TYPO3 14 APIs** — outbound facilitator/probe calls use TYPO3 Core `RequestFactory`; frontend page data uses TYPO3 request attributes
 
 ## Installation
 
@@ -51,22 +53,22 @@ After installation, activate the extension and include the site set in your site
 
 ## Configuration
 
-### Site Settings (TYPO3 v13+/v14)
+### Site Settings (TYPO3 v14.3)
 
 Configure via the TYPO3 backend → Site Management → Site Configuration, or directly in your site's `config.yaml`:
 
 | Setting | Description | Default |
 |---------|-------------|---------|
-| `x402Paywall.enabled` | Master on/off switch | `false` |
-| `x402Paywall.walletAddress` | Your Ethereum/Base/Polygon wallet address | — |
-| `x402Paywall.network` | Blockchain network: `base`, `base-sepolia`, `polygon`, `ethereum` | `base-sepolia` |
-| `x402Paywall.facilitatorUrl` | x402 facilitator endpoint | `https://x402.org/facilitator` |
-| `x402Paywall.currency` | Payment currency | `USDC` |
-| `x402Paywall.defaultPrice` | Default price in USD | `0.01` |
-| `x402Paywall.pricingMode` | `per-request` or `per-session` | `per-request` |
-| `x402Paywall.gatedRoutes` | List of URI patterns to gate (headless/API mode) | — |
-| `x402Paywall.freeRoutes` | URI patterns always allowed through | — |
-| `x402Paywall.gatedPageUids` | Page UIDs to gate (alternative to plugin) | — |
+| `x402_paywall.enabled` | Master on/off switch | `false` |
+| `x402_paywall.wallet_address` | Your Ethereum/Base/Polygon wallet address | — |
+| `x402_paywall.network` | Blockchain network: `base`, `base-sepolia`, `polygon`, `ethereum` | `base-sepolia` |
+| `x402_paywall.facilitator_url` | x402 facilitator endpoint | `https://x402.org/facilitator` |
+| `x402_paywall.currency` | Payment currency | `USDC` |
+| `x402_paywall.default_price` | Default price in USDC | `0.01` |
+| `x402_paywall.pricing_mode` | `per-request` or `per-page` | `per-request` |
+| `x402_paywall.gated_route_patterns` | URI patterns to gate in headless/API mode | — |
+| `x402_paywall.free_routes` | URI patterns always allowed through | — |
+| `x402_paywall.gated_page_uids` | Page UIDs to gate as an alternative to the page toggle | — |
 
 ### Page-Level Pricing
 
@@ -93,14 +95,14 @@ GET /api/v1/content/42 (with payment proof)
 Configure gated routes in site settings:
 
 ```yaml
-x402Paywall:
+x402_paywall:
   enabled: true
-  walletAddress: "0xYOUR_WALLET_ADDRESS"
+  wallet_address: "0xYOUR_WALLET_ADDRESS"
   network: "base"
-  gatedRoutes:
+  gated_route_patterns:
     - "/api/v1/content/*"
     - "/api/v1/premium/*"
-  freeRoutes:
+  free_routes:
     - "/api/v1/public/*"
 ```
 
@@ -184,7 +186,7 @@ export default withX402({
 │    └── X402PaywallMiddleware                                 │
 │          1. RouteGateResolver — is this request gated?      │
 │          2. Check X-PAYMENT-SIGNATURE header                 │
-│          3. PaymentVerifier — verify via facilitator         │
+│          3. PaymentVerifier — verify via TYPO3 RequestFactory│
 │          4. PaymentLogger — log transaction                  │
 │          5. Pass through or return 402                       │
 │                                                              │
@@ -214,16 +216,35 @@ export default withX402({
 ## Requirements
 
 - PHP 8.2+
-- TYPO3 v13.4 or v14.0+
+- TYPO3 v14.3+
 - A wallet address (Ethereum / Base / Polygon) to receive payments
 - Internet access to x402 facilitator for payment verification
+
+## Development
+
+This extension targets TYPO3 14 only. TYPO3 13 support was dropped in v2.0.
+
+```bash
+composer install
+composer validate --strict
+Build/Scripts/runTests.sh -s ci
+```
+
+Quality gates:
+
+- Composer validation and dependency audit
+- PHP syntax linting
+- PHPStan `level: max` with `saschaegerer/phpstan-typo3`
+- PHPUnit unit tests
+
+GitHub Actions runs the same checks on PHP 8.2, 8.3, 8.4, and 8.5.
 
 ## Roadmap
 
 - ✅ **v1.0** — PSR-15 middleware, page-level gating, headless API support
 - ✅ **v1.1** — Backend module with payment dashboard, revenue analytics
 - ✅ **v1.2** — Next.js / React component library (`@webconsulting/typo3-x402-react`)
-- 🔜 **v2.0** — MCP server integration — expose TYPO3 content as paid MCP tools
+- ✅ **v2.0** — TYPO3 14.3-only support, TYPO3 Core HTTP API usage, PHPStan max, and MCP tools
 
 ## License
 

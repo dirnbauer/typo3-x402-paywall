@@ -40,20 +40,23 @@ final class PaywallConfiguration implements PaywallConfigLike
         public readonly array $gatedPageUids = [],
     ) {}
 
+    /**
+     * @param array<string, mixed> $config
+     */
     public static function fromArray(array $config): self
     {
         return new self(
-            enabled: (bool)($config['enabled'] ?? false),
-            walletAddress: (string)($config['wallet_address'] ?? ''),
-            network: (string)($config['network'] ?? self::DEFAULT_NETWORK),
-            facilitatorUrl: (string)($config['facilitator_url'] ?? self::DEFAULT_FACILITATOR_URL),
-            currency: (string)($config['currency'] ?? self::DEFAULT_CURRENCY),
-            defaultPrice: (string)($config['default_price'] ?? '0.01'),
-            pricingMode: (string)($config['pricing_mode'] ?? self::PRICING_PER_REQUEST),
-            freePreviewParagraphs: (int)($config['free_preview_paragraphs'] ?? 0),
-            freeRoutes: (array)($config['free_routes'] ?? []),
-            gatedRoutePatterns: (array)($config['gated_route_patterns'] ?? []),
-            gatedPageUids: array_map('intval', (array)($config['gated_page_uids'] ?? [])),
+            enabled: self::boolFromValue($config['enabled'] ?? false),
+            walletAddress: self::stringFromValue($config['wallet_address'] ?? ''),
+            network: self::stringFromValue($config['network'] ?? self::DEFAULT_NETWORK, self::DEFAULT_NETWORK),
+            facilitatorUrl: self::stringFromValue($config['facilitator_url'] ?? self::DEFAULT_FACILITATOR_URL, self::DEFAULT_FACILITATOR_URL),
+            currency: self::stringFromValue($config['currency'] ?? self::DEFAULT_CURRENCY, self::DEFAULT_CURRENCY),
+            defaultPrice: self::stringFromValue($config['default_price'] ?? '0.01', '0.01'),
+            pricingMode: self::stringFromValue($config['pricing_mode'] ?? self::PRICING_PER_REQUEST, self::PRICING_PER_REQUEST),
+            freePreviewParagraphs: self::intFromValue($config['free_preview_paragraphs'] ?? 0),
+            freeRoutes: self::stringsFromArray($config['free_routes'] ?? []),
+            gatedRoutePatterns: self::stringsFromArray($config['gated_route_patterns'] ?? []),
+            gatedPageUids: self::intsFromArray($config['gated_page_uids'] ?? []),
         );
     }
 
@@ -91,5 +94,50 @@ final class PaywallConfiguration implements PaywallConfigLike
             'ethereum' => 'eip155:1',
             default => $this->network,
         };
+    }
+
+    /**
+     * @return string[]
+     */
+    private static function stringsFromArray(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_map(
+            static fn(mixed $item): string => self::stringFromValue($item),
+            $value,
+        ));
+    }
+
+    /**
+     * @return int[]
+     */
+    private static function intsFromArray(mixed $value): array
+    {
+        if (!is_array($value)) {
+            return [];
+        }
+
+        return array_values(array_map(
+            static fn(mixed $item): int => self::intFromValue($item),
+            $value,
+        ));
+    }
+
+    private static function stringFromValue(mixed $value, string $default = ''): string
+    {
+        return is_scalar($value) ? (string)$value : $default;
+    }
+
+    private static function intFromValue(mixed $value): int
+    {
+        return is_scalar($value) ? (int)$value : 0;
+    }
+
+    private static function boolFromValue(mixed $value): bool
+    {
+        return is_scalar($value) ? (bool)$value : false;
     }
 }
