@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<!--
+  x402 Blog Simulator — Standalone HTML
+  Webconsulting.at CI colors: #1b7a95 (primary), #66c4e1 (light), #c5e4ed (pale)
+
+  Embed in TYPO3 as HTML content element, or use as <iframe src="..."></iframe>
+  Best placed after the "Architektur" section of the x402 blog post.
+
+  No framework needed. GSAP loaded from CDN.
+-->
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<style>
+:root {
+  --c-primary:      #1b7a95;
+  --c-light:        #66c4e1;
+  --c-pale:         #c5e4ed;
+  --c-pale-bg:      #e8f4f8;
+  --c-dark:         #07151f;
+  --c-dark2:        #0d2235;
+  --c-dark3:        #122d44;
+  --c-text:         #e8f4f8;
+  --c-muted:        #7fb8cc;
+  --c-success:      #22c55e;
+  --c-error:        #ef4444;
+  --c-warn:         #f59e0b;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Hanken Grotesk', ui-sans-serif, system-ui, sans-serif;
+  background: transparent;
+  padding: 0;
+}
+
+.sim-wrap {
+  background: linear-gradient(135deg, var(--c-dark) 0%, var(--c-dark2) 100%);
+  border-radius: 16px;
+  padding: 32px 24px;
+  margin: 0;
+  border: 1px solid var(--c-dark3);
+  position: relative;
+  overflow: hidden;
+}
+
+/* decorative glow */
+.sim-wrap::before {
+  content: '';
+  position: absolute;
+  top: -60px; right: -60px;
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(27,122,149,.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Header */
+.sim-header { margin-bottom: 24px; }
+.sim-badge {
+  display: inline-block;
+  background: var(--c-primary); color: #fff;
+  border-radius: 6px; padding: 3px 10px;
+  font-size: 11px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; margin-right: 8px;
+}
+.sim-label-sub { color: var(--c-muted); font-size: 12px; vertical-align: middle; }
+.sim-title { color: var(--c-text); font-size: 20px; font-weight: 700; margin: 8px 0 6px; }
+.sim-subtitle { color: var(--c-muted); font-size: 14px; line-height: 1.5; }
+.sim-subtitle strong { color: var(--c-light); }
+
+/* Scenario tabs */
+.sim-tabs { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.sim-tab {
+  background: var(--c-dark3); color: var(--c-muted);
+  border: 1px solid var(--c-dark3); border-radius: 8px;
+  padding: 7px 14px; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .2s; font-family: inherit;
+}
+.sim-tab.active {
+  background: var(--c-primary); color: #fff;
+  border-color: var(--c-primary);
+}
+
+/* Flow diagram */
+.sim-flow {
+  background: rgba(18,45,68,.5);
+  border: 1px solid var(--c-dark3);
+  border-radius: 12px;
+  padding: 24px 16px;
+  margin-bottom: 20px;
+}
+.flow-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+/* Nodes */
+.flow-node {
+  background: var(--c-dark2);
+  border: 2px solid var(--c-primary);
+  border-radius: 10px;
+  padding: 14px 16px;
+  text-align: center;
+  min-width: 110px;
+  flex-shrink: 0;
+  transition: box-shadow .3s, border-color .3s;
+}
+.flow-node.dim { opacity: .4; border-color: var(--c-dark3); }
+.node-icon { font-size: 24px; margin-bottom: 4px; display: block; }
+.node-sublabel {
+  color: var(--c-muted);
+  font-size: 9px; letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.node-name { color: var(--c-text); font-size: 12px; font-weight: 600; margin-top: 2px; }
+
+/* Connectors */
+.flow-connector {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+  position: relative;
+  min-width: 60px;
+}
+.conn-label {
+  font-size: 9px;
+  color: var(--c-muted);
+  text-align: center;
+  white-space: nowrap;
+  transition: color .3s;
+  line-height: 1.3;
+}
+.conn-label.active { color: var(--c-light); }
+.conn-line {
+  width: 100%;
+  height: 2px;
+  background: var(--c-dark3);
+  position: relative;
+  transition: background .5s;
+}
+.conn-line.active { background: linear-gradient(90deg, var(--c-primary), var(--c-light)); }
+.conn-line.active-success { background: linear-gradient(90deg, var(--c-success), #86efac); }
+.conn-line.active-error { background: linear-gradient(90deg, var(--c-error), #fca5a5); }
+.conn-arrow {
+  position: absolute;
+  top: -5px;
+  font-size: 10px;
+  color: var(--c-dark3);
+  transition: color .3s;
+}
+.conn-arrow.right { right: -4px; }
+.conn-arrow.left { left: -4px; }
+.conn-arrow.active { color: var(--c-light); }
+.conn-arrow.active-success { color: var(--c-success); }
+.conn-arrow.active-error { color: var(--c-error); }
+
+/* Packet flying along arrow */
+.packet {
+  position: absolute;
+  top: -10px;
+  font-size: 16px;
+  opacity: 0;
+}
+
+/* Step explanation */
+.sim-step {
+  min-height: 70px;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  border: 1px solid transparent;
+  transition: all .3s;
+}
+.sim-step.active {
+  background: rgba(18,45,68,.8);
+  border-color: rgba(27,122,149,.3);
+}
+.step-head {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 6px;
+}
+.step-num {
+  color: var(--c-light);
+  font-weight: 700; font-size: 14px;
+}
+.step-text {
+  color: var(--c-text);
+  font-size: 13px; line-height: 1.6;
+}
+.sim-step-idle { color: var(--c-muted); font-size: 13px; padding: 14px 0; }
+.sim-step-idle strong { color: var(--c-light); }
+
+/* Panels */
+.sim-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+@media (max-width: 600px) { .sim-panels { grid-template-columns: 1fr; } }
+
+.sim-panel {
+  background: var(--c-dark);
+  border: 1px solid var(--c-dark3);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.panel-head {
+  background: var(--c-dark3);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.panel-head-label { color: var(--c-light); font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+.res-badge {
+  border-radius: 12px; padding: 2px 10px;
+  font-size: 12px; font-weight: 700; color: #fff;
+  display: none;
+}
+.res-badge.show { display: inline-block; }
+.panel-body {
+  padding: 14px;
+  min-height: 130px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.panel-body pre {
+  font-size: 11px; line-height: 1.6;
+  white-space: pre-wrap; word-break: break-all;
+  font-family: 'Courier New', monospace;
+  color: var(--c-muted);
+}
+.panel-body pre.req-text { color: var(--c-light); }
+.panel-body pre.res-success { color: #86efac; }
+.panel-body pre.res-error { color: #fca5a5; }
+.panel-placeholder { color: rgba(127,184,204,.4); font-style: italic; }
+
+/* Progress + Run button */
+.sim-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.sim-run {
+  background: var(--c-primary); color: #fff;
+  border: none; border-radius: 8px;
+  padding: 10px 24px; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: all .2s;
+  font-family: inherit; letter-spacing: .5px;
+}
+.sim-run:hover { background: var(--c-dark); box-shadow: 0 0 0 2px var(--c-primary); }
+.sim-run:disabled { opacity: .6; cursor: not-allowed; }
+
+.sim-progress { display: flex; gap: 6px; align-items: center; }
+.prog-dot {
+  width: 8px; height: 8px; border-radius: 4px;
+  background: var(--c-dark3);
+  transition: all .3s;
+}
+.prog-dot.done { background: var(--c-success); width: 24px; }
+.prog-dot.current { background: var(--c-primary); }
+
+/* Footer */
+.sim-footer {
+  color: var(--c-muted); font-size: 11px;
+  margin-top: 16px;
+  border-top: 1px solid var(--c-dark3);
+  padding-top: 12px;
+}
+.sim-footer a { color: var(--c-light); text-decoration: none; }
+.sim-footer a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+
+<div class="sim-wrap">
+
+  <!-- Header -->
+  <div class="sim-header">
+    <div>
+      <span class="sim-badge">Interaktive Demo</span>
+      <span class="sim-label-sub">x402 Payment Protocol</span>
+    </div>
+    <h3 class="sim-title">Wie funktioniert x402? — Live-Simulation</h3>
+    <p class="sim-subtitle">
+      Wählen Sie ein Szenario und klicken Sie <strong>▶ Simulieren</strong>.
+      Die Animation zeigt Schritt für Schritt, was im HTTP-Protokoll passiert —
+      so wie ein AI-Agent oder Browser es erlebt.
+    </p>
+  </div>
+
+  <!-- Scenario tabs -->
+  <div class="sim-tabs">
+    <button class="sim-tab active" data-scenario="0">❌ 1 — Ohne Zahlung</button>
+    <button class="sim-tab" data-scenario="1">✅ 2 — Mit Zahlung</button>
+    <button class="sim-tab" data-scenario="2">⚠️ 3 — Ungültige Signatur</button>
+  </div>
+
+  <!-- Flow diagram -->
+  <div class="sim-flow">
+    <div class="flow-row">
+
+      <!-- Client -->
+      <div class="flow-node" id="node-client">
+        <span class="node-icon">🤖</span>
+        <div class="node-sublabel">Requester</div>
+        <div class="node-name">AI-Agent</div>
+      </div>
+
+      <!-- Connector 1: Client ↔ TYPO3 -->
+      <div class="flow-connector" id="conn-ct">
+        <div class="conn-label" id="label-ct-fwd">GET-Anfrage →</div>
+        <div class="conn-line" id="line-ct-fwd">
+          <span class="conn-arrow right" id="arr-ct-fwd">▶</span>
+          <span class="packet" id="pkt-ct">📦</span>
+        </div>
+        <div class="conn-line" id="line-ct-back">
+          <span class="conn-arrow left" id="arr-ct-back">◀</span>
+          <span class="packet" id="pkt-tc">⚡</span>
+        </div>
+        <div class="conn-label" id="label-ct-back">← Antwort</div>
+      </div>
+
+      <!-- TYPO3 -->
+      <div class="flow-node" id="node-typo3">
+        <span class="node-icon">🔒</span>
+        <div class="node-sublabel">Server</div>
+        <div class="node-name">TYPO3 Paywall</div>
+      </div>
+
+      <!-- Connector 2: TYPO3 ↔ Facilitator -->
+      <div class="flow-connector" id="conn-tf">
+        <div class="conn-label" id="label-tf-fwd" style="opacity:.4">→ Signatur prüfen</div>
+        <div class="conn-line" id="line-tf-fwd">
+          <span class="conn-arrow right" id="arr-tf-fwd">▶</span>
+          <span class="packet" id="pkt-tf">🔑</span>
+        </div>
+        <div class="conn-line" id="line-tf-back">
+          <span class="conn-arrow left" id="arr-tf-back">◀</span>
+          <span class="packet" id="pkt-ft">✅</span>
+        </div>
+        <div class="conn-label" id="label-tf-back" style="opacity:.4">← Ergebnis</div>
+      </div>
+
+      <!-- Facilitator -->
+      <div class="flow-node dim" id="node-facilitator">
+        <span class="node-icon">🌐</span>
+        <div class="node-sublabel">Coinbase</div>
+        <div class="node-name">x402 Facilitator</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step explanation -->
+  <div class="sim-step" id="sim-step">
+    <p class="sim-step-idle">
+      Klicken Sie auf <strong>▶ Simulieren</strong>, um die x402-Kommunikation Schritt für Schritt zu sehen.
+    </p>
+  </div>
+
+  <!-- Request/Response panels -->
+  <div class="sim-panels">
+    <div class="sim-panel">
+      <div class="panel-head">
+        <span class="panel-head-label">📤 HTTP-Anfrage</span>
+      </div>
+      <div class="panel-body">
+        <pre id="panel-request" class="req-text"><span class="panel-placeholder">Anfrage erscheint hier...</span></pre>
+      </div>
+    </div>
+    <div class="sim-panel">
+      <div class="panel-head">
+        <span class="panel-head-label">📥 HTTP-Antwort</span>
+        <span class="res-badge" id="res-badge">200 OK</span>
+      </div>
+      <div class="panel-body">
+        <pre id="panel-response"><span class="panel-placeholder">Antwort erscheint nach Simulation...</span></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="sim-actions">
+    <button class="sim-run" id="btn-run">▶ Simulieren</button>
+    <div class="sim-progress" id="sim-progress" style="display:none"></div>
+  </div>
+
+  <!-- Footer -->
+  <p class="sim-footer">
+    Diese Simulation läuft vollständig im Browser. Echte Tests mit kostenlosem Base-Sepolia-Testnet-USDC:
+    <a href="https://faucet.circle.com" target="_blank" rel="noopener">faucet.circle.com</a> ·
+    <a href="https://github.com/dirnbauer/typo3-x402-paywall" target="_blank" rel="noopener">GitHub</a> ·
+    <a href="https://www.webconsulting.at/blog/typo3-x402-paywall-ai-agent-monetarisierung" target="_blank" rel="noopener">Artikel</a>
+  </p>
+
+</div>
+
+<script>
+// ── Data ─────────────────────────────────────────────────────────────────────
+const SCENARIOS = [
+  {
+    curl: `GET /premium-artikel HTTP/2
+Host: typo3.example.at
+User-Agent: AI-Agent/1.0
+Accept: application/json`,
+    response: `HTTP/2 402 Payment Required
+Content-Type: application/json
+PAYMENT-REQUIRED: eyJzY2hlbWUiOiJleGFjdCIs
+  Im5ldHdvcmsiOiJlaXAxNTU6ODQ1MyIsIm1h...
+
+{
+  "status": 402,
+  "human_readable": {
+    "price": "0.001 USDC",
+    "network": "Base (Mainnet)",
+    "description": "Premium Artikel"
+  }
+}`,
+    result: '402', resultText: '402 — Kein Zugriff', resultColor: '#ef4444',
+    steps: [
+      {
+        icon: '→', title: 'Anfrage ohne Zahlung',
+        text: 'Der AI-Agent sendet eine normale HTTP GET-Anfrage — kein Account, kein API-Key, nur HTTP. So wie seit 30 Jahren.',
+        nodes: { client: 'send', typo3: 'check' },
+      },
+      {
+        icon: '🔒', title: 'Middleware prüft Zugriff',
+        text: 'Die X402PaywallMiddleware erkennt: Diese Seite hat tx_x402_paywall_enabled = 1 (Preis: 0.001 USDC). Kein PAYMENT-SIGNATURE Header vorhanden → Zahlung erforderlich.',
+        nodes: { typo3: 'gate' },
+      },
+      {
+        icon: '←', title: '402 Payment Required',
+        text: 'TYPO3 antwortet mit HTTP 402 und einem PAYMENT-REQUIRED Header. Darin codiert: Preis, Netzwerk (Base Mainnet), Wallet-Adresse — maschinenlesbar als Base64-JSON. Kein Mensch muss das lesen.',
+        nodes: { typo3: 'respond402', client: 'receive402' },
+        showResponse: true,
+      },
+    ],
+    connCT: { fwd: 'active', back: 'active-error' },
+    connTF: { fwd: false, back: false },
+    dimFacilitator: true,
+  },
+  {
+    curl: `GET /premium-artikel HTTP/2
+Host: typo3.example.at
+User-Agent: AI-Agent/1.0
+Accept: application/json
+PAYMENT-SIGNATURE: eyJmcm9tIjoiMHhBZ2Vu
+  dFdhbGxldC4uLiIsInNpZ25hdHVyZSI6IjB4...`,
+    response: `HTTP/2 200 OK
+Content-Type: text/html; charset=utf-8
+PAYMENT-RESPONSE: eyJ0eFdhc2giOiIweGRlYWRi...
+
+<!DOCTYPE html>
+<html lang="de">
+  <!-- ✅ Vollständiger Artikel-Inhalt -->
+  <title>TYPO3 x402 — vollständiger Inhalt</title>
+  <body>
+    <article>Hier steht der vollständige
+    Premium-Inhalt des Artikels...</article>
+  </body>
+</html>`,
+    result: '200', resultText: '200 — Zugriff gewährt', resultColor: '#22c55e',
+    steps: [
+      {
+        icon: '🔑', title: 'Anfrage mit Zahlungssignatur',
+        text: 'Der Agent hat die 402-Antwort gelesen, 0.001 USDC auf Base signiert (on-chain!) und sendet die Anfrage mit PAYMENT-SIGNATURE Header.',
+        nodes: { client: 'send', typo3: 'check' },
+      },
+      {
+        icon: '🌐', title: 'Weitergabe an Coinbase Facilitator',
+        text: 'TYPO3 erkennt den Header und leitet die Signatur zur Verifizierung an x402.org weiter. Der Facilitator prüft die Blockchain-Transaktion on-chain auf Base.',
+        nodes: { typo3: 'relay', facilitator: 'check' },
+        activeFacilitator: true,
+      },
+      {
+        icon: '✓', title: 'Facilitator bestätigt Zahlung',
+        text: '0.001 USDC wurden von der Agent-Wallet an Ihre TYPO3-Wallet übertragen und on-chain bestätigt. Die Transaktion ist unveränderlich auf der Blockchain gespeichert.',
+        nodes: { facilitator: 'ok', typo3: 'receive-ok' },
+        activeFacilitator: true,
+      },
+      {
+        icon: '←', title: '200 OK — Content geliefert',
+        text: 'TYPO3 liefert den vollständigen Artikel. Im PAYMENT-RESPONSE Header steckt der Transaction-Hash für Ihre Buchhaltung. Die Zahlung ist abgeschlossen.',
+        nodes: { typo3: 'respond200', client: 'receive200' },
+        showResponse: true,
+      },
+    ],
+    connCT: { fwd: 'active', back: 'active-success' },
+    connTF: { fwd: 'active', back: 'active-success' },
+    dimFacilitator: false,
+  },
+  {
+    curl: `GET /premium-artikel HTTP/2
+Host: typo3.example.at
+User-Agent: Evil-Bot/1.0
+Accept: application/json
+PAYMENT-SIGNATURE: UNGUELTIGE_SIGNATUR_BASE64`,
+    response: `HTTP/2 402 Payment Required
+Content-Type: application/json
+PAYMENT-REQUIRED: eyJzY2hlbWUiOiJleGFjdCIs...
+
+{
+  "status": 402,
+  "error": "Payment verification failed",
+  "message": "Invalid signature: transaction
+              not found on chain"
+}`,
+    result: '402', resultText: '402 — Abgelehnt', resultColor: '#f59e0b',
+    steps: [
+      {
+        icon: '⚠️', title: 'Gefälschte Signatur',
+        text: 'Ein Bot sendet eine gefälschte PAYMENT-SIGNATURE — kein echter USDC-Transfer, kein valides Krypto-Signing.',
+        nodes: { client: 'send', typo3: 'check' },
+      },
+      {
+        icon: '🌐', title: 'Trotzdem: Prüfung beim Facilitator',
+        text: 'TYPO3 leitet die Signatur zur Überprüfung weiter — unabhängig davon, ob sie echt aussieht oder nicht.',
+        nodes: { typo3: 'relay', facilitator: 'check' },
+        activeFacilitator: true,
+      },
+      {
+        icon: '✗', title: 'Facilitator: Transaktion nicht gefunden',
+        text: 'Keine passende Transaktion auf der Blockchain. Die Signatur ist ungültig. Der Versuch kostet dem Angreifer nichts — bringt aber auch nichts.',
+        nodes: { facilitator: 'reject', typo3: 'receive-reject' },
+        activeFacilitator: true,
+      },
+      {
+        icon: '←', title: 'Erneut 402 mit Fehlermeldung',
+        text: 'TYPO3 antwortet wieder mit 402. Der Content bleibt geschützt. Das System ist sicher gegen Replay-Angriffe und gefälschte Signaturen.',
+        nodes: { typo3: 'respond402', client: 'receive402' },
+        showResponse: true,
+      },
+    ],
+    connCT: { fwd: 'active', back: 'active-error' },
+    connTF: { fwd: 'active', back: 'active-error' },
+    dimFacilitator: false,
+  },
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let current = 0;
+let running = false;
+
+const nodes = {
+  client: document.getElementById('node-client'),
+  typo3: document.getElementById('node-typo3'),
+  facilitator: document.getElementById('node-facilitator'),
+};
+const els = {
+  step: document.getElementById('sim-step'),
+  reqPanel: document.getElementById('panel-request'),
+  resPanel: document.getElementById('panel-response'),
+  resBadge: document.getElementById('res-badge'),
+  progress: document.getElementById('sim-progress'),
+  runBtn: document.getElementById('btn-run'),
+};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+function glow(node, color, intensity = 24) {
+  node.style.boxShadow = `0 0 ${intensity}px ${color}88, 0 0 ${intensity * 2}px ${color}33`;
+  node.style.borderColor = color;
+}
+function resetGlow(node) {
+  node.style.boxShadow = '';
+  node.style.borderColor = 'var(--c-primary)';
+}
+function resetAll() {
+  Object.values(nodes).forEach(n => { resetGlow(n); n.classList.remove('dim'); });
+}
+
+async function typeText(el, text, cls = '', speed = 8) {
+  el.innerHTML = '';
+  el.className = cls;
+  let i = 0;
+  return new Promise(resolve => {
+    const iv = setInterval(() => {
+      el.textContent = text.slice(0, i);
+      i += speed;
+      if (i > text.length) {
+        el.textContent = text;
+        clearInterval(iv);
+        resolve();
+      }
+    }, 16);
+  });
+}
+
+function animatePacket(pktId, fromPct, toPct, duration = 600) {
+  const pkt = document.getElementById(pktId);
+  if (!pkt || !window.gsap) return Promise.resolve();
+  return new Promise(resolve => {
+    gsap.fromTo(pkt,
+      { left: fromPct + '%', opacity: 1 },
+      { left: toPct + '%', duration: duration / 1000, ease: 'power2.inOut',
+        onComplete: () => { gsap.set(pkt, { opacity: 0 }); resolve(); }
+      }
+    );
+  });
+}
+
+function setLineClass(lineId, cls) {
+  const el = document.getElementById(lineId);
+  const arr = document.getElementById(lineId.replace('line-', 'arr-'));
+  const label = document.getElementById(lineId.replace('line-', 'label-'));
+  if (el) el.className = 'conn-line' + (cls ? ' ' + cls : '');
+  if (arr) arr.className = 'conn-arrow ' + (lineId.includes('fwd') ? 'right' : 'left') + (cls ? ' ' + cls : '');
+  if (label) label.className = 'conn-label' + (cls ? ' active' : '');
+}
+
+function buildProgress(count, activeIdx) {
+  els.progress.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    const d = document.createElement('div');
+    d.className = 'prog-dot' + (i < activeIdx ? ' done' : i === activeIdx ? ' current' : '');
+    els.progress.appendChild(d);
+  }
+  els.progress.style.display = 'flex';
+}
+
+function showStep(stepIdx, scenario) {
+  const step = scenario.steps[stepIdx];
+  buildProgress(scenario.steps.length, stepIdx);
+  els.step.innerHTML = `
+    <div class="step-head">
+      <span style="font-size:18px">${step.icon}</span>
+      <span class="step-num">Schritt ${stepIdx + 1}/${scenario.steps.length}: ${step.title}</span>
+    </div>
+    <p class="step-text">${step.text}</p>
+  `;
+  els.step.classList.add('active');
+}
+
+function nodeColor(scenario) {
+  return scenario.result === '200' ? 'var(--c-success)' : 'var(--c-error)';
+}
+
+// ── Run simulation ────────────────────────────────────────────────────────────
+async function runSimulation() {
+  if (running) return;
+  running = true;
+
+  const scenario = SCENARIOS[current];
+  const steps = scenario.steps;
+
+  // Reset
+  resetAll();
+  els.step.classList.remove('active');
+  els.step.innerHTML = '';
+  els.reqPanel.innerHTML = '<span class="panel-placeholder">Anfrage wird gesendet...</span>';
+  els.resPanel.innerHTML = '<span class="panel-placeholder">Warten auf Antwort...</span>';
+  els.resPanel.className = '';
+  els.resBadge.style.display = 'none';
+  els.resBadge.classList.remove('show');
+  els.progress.style.display = 'none';
+  els.runBtn.disabled = true;
+  els.runBtn.textContent = '⏳ Simulation läuft...';
+
+  // Initial connector state
+  setLineClass('line-ct-fwd', '');
+  setLineClass('line-ct-back', '');
+  setLineClass('line-tf-fwd', '');
+  setLineClass('line-tf-back', '');
+
+  // Dim facilitator if not used
+  if (scenario.dimFacilitator) {
+    nodes.facilitator.classList.add('dim');
+  }
+
+  // Type out request
+  await typeText(els.reqPanel, scenario.curl, 'req-text', 5);
+  await sleep(400);
+
+  // Animate each step
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i];
+    showStep(i, scenario);
+
+    // Forward arrow: client → typo3
+    if (step.nodes.client === 'send' || i === 0) {
+      setLineClass('line-ct-fwd', 'active');
+      glow(nodes.client, 'var(--c-light)');
+      await animatePacket('pkt-ct', 0, 85, 500);
+      glow(nodes.typo3, 'var(--c-primary)');
+      await sleep(300);
+    }
+
+    // Gate check
+    if (step.nodes.typo3 === 'gate' || step.nodes.typo3 === 'check') {
+      glow(nodes.typo3, 'var(--c-warn)');
+      if (window.gsap) gsap.to(nodes.typo3, { scale: 1.04, duration: .2, yoyo: true, repeat: 1 });
+      await sleep(700);
+    }
+
+    // Facilitator relay
+    if (step.nodes.typo3 === 'relay' || step.activeFacilitator) {
+      nodes.facilitator.classList.remove('dim');
+      setLineClass('line-tf-fwd', 'active');
+      glow(nodes.typo3, 'var(--c-primary)');
+      await animatePacket('pkt-tf', 0, 85, 500);
+      glow(nodes.facilitator, 'var(--c-light)');
+      await sleep(500);
+    }
+
+    // Facilitator result
+    if (step.nodes.facilitator === 'ok') {
+      glow(nodes.facilitator, 'var(--c-success)');
+      setLineClass('line-tf-back', 'active-success');
+      await animatePacket('pkt-ft', 85, 0, 400);
+      glow(nodes.typo3, 'var(--c-success)');
+      await sleep(500);
+    } else if (step.nodes.facilitator === 'reject') {
+      glow(nodes.facilitator, 'var(--c-error)');
+      setLineClass('line-tf-back', 'active-error');
+      await animatePacket('pkt-ft', 85, 0, 400);
+      glow(nodes.typo3, 'var(--c-warn)');
+      await sleep(500);
+    }
+
+    // Response back to client
+    if (step.showResponse) {
+      const isSuccess = scenario.result === '200';
+      const backClass = isSuccess ? 'active-success' : 'active-error';
+      setLineClass('line-ct-back', backClass);
+      await animatePacket('pkt-tc', 85, 0, 600);
+      glow(nodes.client, isSuccess ? 'var(--c-success)' : 'var(--c-error)');
+      await sleep(300);
+
+      // Show response
+      const resCls = isSuccess ? 'res-success' : 'res-error';
+      await typeText(els.resPanel, scenario.response, resCls, 8);
+      els.resBadge.textContent = scenario.resultText;
+      els.resBadge.style.backgroundColor = scenario.resultColor;
+      els.resBadge.style.display = 'inline-block';
+      els.resBadge.classList.add('show');
+      if (window.gsap) gsap.from(els.resBadge, { scale: 0, duration: .4, ease: 'back.out(2)' });
+    }
+
+    await sleep(1200);
+  }
+
+  els.runBtn.disabled = false;
+  els.runBtn.textContent = '▶ Nochmal simulieren';
+  running = false;
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+document.querySelectorAll('.sim-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.sim-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    current = parseInt(btn.dataset.scenario);
+
+    // Reset
+    running = false;
+    resetAll();
+    els.step.classList.remove('active');
+    els.step.innerHTML = '<p class="sim-step-idle">Klicken Sie auf <strong>▶ Simulieren</strong>, um zu starten.</p>';
+    els.reqPanel.innerHTML = '<span class="panel-placeholder">Anfrage erscheint hier...</span>';
+    els.resPanel.innerHTML = '<span class="panel-placeholder">Antwort erscheint nach Simulation...</span>';
+    els.resPanel.className = '';
+    els.resBadge.classList.remove('show');
+    els.resBadge.style.display = 'none';
+    els.progress.style.display = 'none';
+    els.runBtn.disabled = false;
+    els.runBtn.textContent = '▶ Simulieren';
+
+    // Update connector labels
+    const s = SCENARIOS[current];
+    if (s.dimFacilitator) {
+      nodes.facilitator.classList.add('dim');
+    }
+    setLineClass('line-ct-fwd', '');
+    setLineClass('line-ct-back', '');
+    setLineClass('line-tf-fwd', '');
+    setLineClass('line-tf-back', '');
+  });
+});
+
+document.getElementById('btn-run').addEventListener('click', runSimulation);
+</script>
+</body>
+</html>
