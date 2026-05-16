@@ -1,0 +1,70 @@
+<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+      data-namespace-typo3-fluid="true">
+
+<f:layout name="Default" />
+
+<f:section name="Content">
+
+<f:if condition="{paywallActive}">
+    <f:then>
+        <div class="x402-paywall"
+             id="x402-paywall-{pageUid}"
+             data-x402-requirement="{paymentRequirement}"
+             data-x402-requirement-base64="{paymentRequirementBase64}"
+             data-x402-price="{price}"
+             data-x402-currency="{currency}"
+             data-x402-page-uid="{pageUid}"
+             data-x402-verify-endpoint="{verifyEndpoint}">
+
+            <!-- Gradient overlay that covers the page content -->
+            <div class="x402-paywall__overlay" id="x402-overlay-{pageUid}">
+                <div class="x402-paywall__gradient"></div>
+
+                <!-- Payment card -->
+                <div class="x402-paywall__card">
+                    <div class="x402-paywall__icon">
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+                        </svg>
+                    </div>
+
+                    <h3 class="x402-paywall__title">Premium Content</h3>
+
+                    <p class="x402-paywall__description">{description}</p>
+
+                    <div class="x402-paywall__price-badge">
+                        {price} {currency}
+                    </div>
+
+                    <div class="x402-paywall__network">
+                        via x402 on {networkLabel}
+                    </div>
+
+                    <!-- Error display (hidden by default) -->
+                    <div class="x402-paywall__error" id="x402-error-{pageUid}" style="display: none;"></div>
+
+                    <div class="x402-paywall__actions">
+                        <button class="x402-paywall__btn x402-paywall__btn--pay"
+                                id="x402-pay-btn-{pageUid}"
+                                onclick="x402Pay({pageUid})">
+                            Pay {price} {currency}
+                        </button>
+                    </div>
+
+                    <p class="x402-paywall__powered">
+                        Powered by <a href="https://www.x402.org" target="_blank" rel="noopener">x402</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Include CSS and JS -->
+        <f:asset.css identifier="x402-paywall" href="EXT:x402_paywall/Resources/Public/Css/paywall.css" />
+        <f:asset.script identifier="x402-paywall" src="EXT:x402_paywall/Resources/Public/JavaScript/paywall.js" />
+    </f:then>
+</f:if>
+
+</f:section>
+
+</html>
