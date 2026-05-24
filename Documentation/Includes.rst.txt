@@ -1,0 +1,5 @@
+..  This file contains global substitutions for the manual.
+
+..  |extension_key| replace:: x402_paywall
+..  |composer_name| replace:: webconsulting/typo3-x402-paywall
+..  |extension_name| replace:: TYPO3 x402 Paywall

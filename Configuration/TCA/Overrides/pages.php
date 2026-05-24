@@ -35,7 +35,7 @@ $tempColumns = [
             'max' => 255,
             'eval' => 'trim',
             'default' => '',
-            'placeholder' => 'Premium content — access requires payment',
+            'placeholder' => 'LLL:EXT:x402_paywall/Resources/Private/Language/locallang_db.xlf:pages.tx_x402_paywall_description.placeholder',
         ],
         'displayCond' => 'FIELD:tx_x402_paywall_enabled:REQ:true',
     ],

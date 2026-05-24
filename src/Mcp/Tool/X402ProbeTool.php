@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Webconsulting\X402Paywall\Mcp\Tool;
 
 use TYPO3\CMS\Core\Http\RequestFactory;
+use Webconsulting\X402Paywall\Utility\HttpUrl;
 use Webconsulting\X402Paywall\Utility\Json;
 use Webconsulting\X402Paywall\Utility\ScalarValue;
 
@@ -73,8 +74,8 @@ final class X402ProbeTool extends AbstractMcpTool
             return Json::encode(['error' => 'url is required']);
         }
 
-        if (!$this->isAllowedHttpUrl($url)) {
-            return Json::encode(['error' => 'Only http and https URLs are supported']);
+        if (!HttpUrl::isAllowedOutboundHttpUrl($url)) {
+            return Json::encode(['error' => 'URL is not allowed for server-side probes']);
         }
 
         try {
@@ -130,10 +131,4 @@ final class X402ProbeTool extends AbstractMcpTool
         }
     }
 
-    private function isAllowedHttpUrl(string $url): bool
-    {
-        $scheme = parse_url($url, PHP_URL_SCHEME);
-
-        return $scheme === 'http' || $scheme === 'https';
-    }
 }

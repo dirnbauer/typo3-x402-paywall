@@ -9,6 +9,6 @@ use TYPO3\CMS\Extbase\Utility\ExtensionUtility;
 ExtensionUtility::registerPlugin(
     'X402Paywall',
     'Paywall',
-    'x402 Paywall Overlay',
+    'LLL:EXT:x402_paywall/Resources/Private/Language/locallang_db.xlf:plugin.paywall.title',
     'x402-paywall-plugin',
 );

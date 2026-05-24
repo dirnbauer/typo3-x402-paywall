@@ -1,234 +1,280 @@
 <?xml version="1.0" encoding="utf-8"?>
-<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="en">
+<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="en" trgLang="de">
     <file id="messages" original="messages">
         <unit id="mlang_labels_tablabel">
             <segment>
                 <source>x402 payment dashboard</source>
+                <target>x402 Zahlungsdashboard</target>
             </segment>
         </unit>
         <unit id="mlang_tabs_tab">
             <segment>
                 <source>x402 Paywall</source>
+                <target>x402 Bezahlschranke</target>
             </segment>
         </unit>
         <unit id="dashboard.period.today">
             <segment>
                 <source>Today</source>
+                <target>Heute</target>
             </segment>
         </unit>
         <unit id="dashboard.period.last_7_days">
             <segment>
                 <source>Last 7 days</source>
+                <target>Letzte 7 Tage</target>
             </segment>
         </unit>
         <unit id="dashboard.period.last_30_days">
             <segment>
                 <source>Last 30 days</source>
+                <target>Letzte 30 Tage</target>
             </segment>
         </unit>
         <unit id="dashboard.period.all_time">
             <segment>
                 <source>All time</source>
+                <target>Gesamt</target>
             </segment>
         </unit>
         <unit id="dashboard.transactions">
             <segment>
                 <source>Transactions</source>
+                <target>Transaktionen</target>
             </segment>
         </unit>
         <unit id="dashboard.top_pages">
             <segment>
                 <source>Top pages (30 days)</source>
+                <target>Top-Seiten (30 Tage)</target>
             </segment>
         </unit>
         <unit id="dashboard.page_uid">
             <segment>
                 <source>Page UID</source>
+                <target>Seiten-UID</target>
             </segment>
         </unit>
         <unit id="dashboard.revenue_usdc">
             <segment>
                 <source>Revenue (USDC)</source>
+                <target>Umsatz (USDC)</target>
             </segment>
         </unit>
         <unit id="dashboard.no_payments">
             <segment>
                 <source>No payments recorded yet. Configure gated pages and wait for traffic.</source>
+                <target>Noch keine Zahlungen aufgezeichnet. Konfigurieren Sie geschützte Seiten und warten Sie auf Zugriffe.</target>
             </segment>
         </unit>
         <unit id="dashboard.recent_transactions">
             <segment>
                 <source>Recent transactions</source>
+                <target>Letzte Transaktionen</target>
             </segment>
         </unit>
         <unit id="dashboard.time">
             <segment>
                 <source>Time</source>
+                <target>Zeit</target>
             </segment>
         </unit>
         <unit id="dashboard.page">
             <segment>
                 <source>Page</source>
+                <target>Seite</target>
             </segment>
         </unit>
         <unit id="dashboard.amount">
             <segment>
                 <source>Amount</source>
+                <target>Betrag</target>
             </segment>
         </unit>
         <unit id="dashboard.network">
             <segment>
                 <source>Network</source>
+                <target>Netzwerk</target>
             </segment>
         </unit>
         <unit id="dashboard.status">
             <segment>
                 <source>Status</source>
+                <target>Status</target>
             </segment>
         </unit>
         <unit id="dashboard.status.settled">
             <segment>
                 <source>settled</source>
+                <target>abgeschlossen</target>
             </segment>
         </unit>
         <unit id="dashboard.no_transactions">
             <segment>
                 <source>No transactions yet.</source>
+                <target>Noch keine Transaktionen.</target>
             </segment>
         </unit>
         <unit id="dashboard.configuration">
             <segment>
                 <source>Configuration</source>
+                <target>Konfiguration</target>
             </segment>
         </unit>
         <unit id="dashboard.configuration.help">
             <segment>
                 <source>Configure x402 paywall settings in your site configuration. Enable the paywall per page with the x402 Paywall tab in page properties.</source>
+                <target>Konfigurieren Sie die x402 Einstellungen in der Site-Konfiguration. Aktivieren Sie die Bezahlschranke pro Seite im Tab x402 Bezahlschranke der Seiteneigenschaften.</target>
             </segment>
         </unit>
         <unit id="dashboard.documentation">
             <segment>
                 <source>Documentation on GitHub</source>
+                <target>Dokumentation auf GitHub</target>
             </segment>
         </unit>
         <unit id="simulator.title">
             <segment>
                 <source>x402 flow simulator</source>
+                <target>x402 Ablauf-Simulator</target>
             </segment>
         </unit>
         <unit id="simulator.scenario">
             <segment>
                 <source>Scenario</source>
+                <target>Szenario</target>
             </segment>
         </unit>
         <unit id="simulator.url">
             <segment>
                 <source>URL</source>
+                <target>URL</target>
             </segment>
         </unit>
         <unit id="simulator.run">
             <segment>
                 <source>Simulate</source>
+                <target>Simulieren</target>
             </segment>
         </unit>
         <unit id="simulator.running">
             <segment>
                 <source>Running...</source>
+                <target>Läuft...</target>
             </segment>
         </unit>
         <unit id="simulator.request">
             <segment>
                 <source>Request</source>
+                <target>Anfrage</target>
             </segment>
         </unit>
         <unit id="simulator.response">
             <segment>
                 <source>Response</source>
+                <target>Antwort</target>
             </segment>
         </unit>
         <unit id="simulator.requirement">
             <segment>
                 <source>Decoded payment requirement</source>
+                <target>Dekodierte Zahlungsanforderung</target>
             </segment>
         </unit>
         <unit id="simulator.waiting_request">
             <segment>
                 <source>Select a scenario and run the simulation.</source>
+                <target>Wählen Sie ein Szenario und starten Sie die Simulation.</target>
             </segment>
         </unit>
         <unit id="simulator.waiting_response">
             <segment>
                 <source>Waiting for simulation result.</source>
+                <target>Wartet auf das Simulationsergebnis.</target>
             </segment>
         </unit>
         <unit id="simulator.error">
             <segment>
                 <source>Error</source>
+                <target>Fehler</target>
             </segment>
         </unit>
         <unit id="simulator.error.invalid_json">
             <segment>
                 <source>Invalid JSON body.</source>
+                <target>Ungültiger JSON-Body.</target>
             </segment>
         </unit>
         <unit id="simulator.error.missing_url">
             <segment>
                 <source>No URL provided.</source>
+                <target>Keine URL angegeben.</target>
             </segment>
         </unit>
         <unit id="simulator.error.disallowed_url">
             <segment>
                 <source>Only public http and https URLs are supported.</source>
+                <target>Es werden nur öffentliche HTTP- und HTTPS-URLs unterstützt.</target>
             </segment>
         </unit>
         <unit id="simulator.scenario.plain_get.label">
             <segment>
                 <source>Plain GET returns 402</source>
+                <target>Einfacher GET liefert 402</target>
             </segment>
         </unit>
         <unit id="simulator.scenario.plain_get.description">
             <segment>
                 <source>A client requests gated content without payment. TYPO3 returns payment requirements with status 402.</source>
+                <target>Ein Client ruft geschützte Inhalte ohne Zahlung ab. TYPO3 liefert Zahlungsanforderungen mit Status 402.</target>
             </segment>
         </unit>
         <unit id="simulator.scenario.mock_signature.label">
             <segment>
                 <source>Mock signature is rejected</source>
+                <target>Testsignatur wird abgelehnt</target>
             </segment>
         </unit>
         <unit id="simulator.scenario.mock_signature.description">
             <segment>
                 <source>The client sends a fake payment signature. The facilitator rejects it and confirms the verification path.</source>
+                <target>Der Client sendet eine gefälschte Zahlungssignatur. Der Facilitator lehnt sie ab und bestätigt den Prüfpfad.</target>
             </segment>
         </unit>
         <unit id="simulator.scenario.news_detail.label">
             <segment>
                 <source>News detail page</source>
+                <target>News-Detailseite</target>
             </segment>
         </unit>
         <unit id="simulator.scenario.news_detail.description">
             <segment>
                 <source>Gated news article request for an EXT:news detail plugin.</source>
+                <target>Anfrage eines geschützten News-Artikels für ein EXT:news Detail-Plugin.</target>
             </segment>
         </unit>
         <unit id="simulator.scenario.api_route.label">
             <segment>
                 <source>Headless API route</source>
+                <target>Headless API-Route</target>
             </segment>
         </unit>
         <unit id="simulator.scenario.api_route.description">
             <segment>
                 <source>A headless API endpoint gated by a configured route pattern.</source>
+                <target>Ein Headless API-Endpunkt, der über ein konfiguriertes Routenmuster geschützt ist.</target>
             </segment>
         </unit>
         <unit id="simulator.scenario.facilitator_check.label">
             <segment>
                 <source>Facilitator health check</source>
+                <target>Facilitator-Erreichbarkeit</target>
             </segment>
         </unit>
         <unit id="simulator.scenario.facilitator_check.description">
             <segment>
                 <source>Checks whether the configured x402 facilitator endpoint is reachable.</source>
+                <target>Prüft, ob der konfigurierte x402 Facilitator-Endpunkt erreichbar ist.</target>
             </segment>
         </unit>
     </file>

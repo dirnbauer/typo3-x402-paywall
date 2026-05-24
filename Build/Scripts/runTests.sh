@@ -16,7 +16,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "${ROOT_DIR}"
 
 run_lint() {
-    find Configuration src tests ext_emconf.php ext_localconf.php -name '*.php' -print0 \
+    find Configuration src tests ext_localconf.php -name '*.php' -print0 \
         | xargs -0 -n1 "${PHP_BIN}" -l
 }
 
@@ -25,7 +25,7 @@ case "${SUITE}" in
         run_lint
         ;;
     phpstan)
-        "${PHP_BIN}" vendor/bin/phpstan analyse --configuration=phpstan.neon --no-progress
+        "${PHP_BIN}" vendor/bin/phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=1G
         ;;
     unit)
         "${PHP_BIN}" vendor/bin/phpunit --configuration=phpunit.xml.dist
@@ -34,7 +34,7 @@ case "${SUITE}" in
         composer validate --strict
         composer audit --no-interaction
         run_lint
-        "${PHP_BIN}" vendor/bin/phpstan analyse --configuration=phpstan.neon --no-progress
+        "${PHP_BIN}" vendor/bin/phpstan analyse --configuration=phpstan.neon --no-progress --memory-limit=1G
         "${PHP_BIN}" vendor/bin/phpunit --configuration=phpunit.xml.dist
         ;;
     *)
@@ -42,4 +42,3 @@ case "${SUITE}" in
         exit 1
         ;;
 esac
-

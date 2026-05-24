@@ -14,7 +14,15 @@
              data-x402-price="{price}"
              data-x402-currency="{currency}"
              data-x402-page-uid="{pageUid}"
-             data-x402-verify-endpoint="{verifyEndpoint}">
+             data-x402-verify-endpoint="{verifyEndpoint}"
+             data-x402-label-missing-config="{f:translate(key: 'LLL:EXT:x402_paywall/Resources/Private/Language/locallang.xlf:paywall.error.missing_config')}"
+             data-x402-label-invalid-config="{f:translate(key: 'LLL:EXT:x402_paywall/Resources/Private/Language/locallang.xlf:paywall.error.invalid_config')}"
+             data-x402-label-no-wallet="{f:translate(key: 'LLL:EXT:x402_paywall/Resources/Private/Language/locallang.xlf:paywall.error.no_wallet')}"
+             data-x402-label-no-account="{f:translate(key: 'LLL:EXT:x402_paywall/Resources/Private/Language/locallang.xlf:paywall.error.no_account')}"
+             data-x402-label-signature-cancelled="{f:translate(key: 'LLL:EXT:x402_paywall/Resources/Private/Language/locallang.xlf:paywall.error.signature_cancelled')}"
+             data-x402-label-verification-failed="{f:translate(key: 'LLL:EXT:x402_paywall/Resources/Private/Language/locallang.xlf:paywall.error.verification_failed')}"
+             data-x402-label-unexpected="{f:translate(key: 'LLL:EXT:x402_paywall/Resources/Private/Language/locallang.xlf:paywall.error.unexpected')}"
+             data-x402-label-processing="{f:translate(key: 'LLL:EXT:x402_paywall/Resources/Private/Language/locallang.xlf:paywall.processing')}">
 
             <!-- Gradient overlay that covers the page content -->
             <div class="x402-paywall__overlay" id="x402-overlay-{pageUid}">
@@ -29,7 +37,9 @@
                         </svg>
                     </div>
 
-                    <h3 class="x402-paywall__title">Premium Content</h3>
+                    <h3 class="x402-paywall__title">
+                        <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang.xlf:paywall.title" />
+                    </h3>
 
                     <p class="x402-paywall__description">{description}</p>
 
@@ -38,22 +48,22 @@
                     </div>
 
                     <div class="x402-paywall__network">
-                        via x402 on {networkLabel}
+                        <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang.xlf:paywall.network_prefix" /> {networkLabel}
                     </div>
 
                     <!-- Error display (hidden by default) -->
-                    <div class="x402-paywall__error" id="x402-error-{pageUid}" style="display: none;"></div>
+                    <div class="x402-paywall__error" id="x402-error-{pageUid}" aria-live="polite" style="display: none;"></div>
 
                     <div class="x402-paywall__actions">
                         <button class="x402-paywall__btn x402-paywall__btn--pay"
                                 id="x402-pay-btn-{pageUid}"
                                 onclick="x402Pay({pageUid})">
-                            Pay {price} {currency}
+                            <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang.xlf:paywall.pay_button" /> {price} {currency}
                         </button>
                     </div>
 
                     <p class="x402-paywall__powered">
-                        Powered by <a href="https://www.x402.org" target="_blank" rel="noopener">x402</a>
+                        <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang.xlf:paywall.powered_by" /> <a href="https://www.x402.org" target="_blank" rel="noopener">x402</a>
                     </p>
                 </div>
             </div>

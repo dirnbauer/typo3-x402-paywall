@@ -1,6 +1,6 @@
 {
   "name": "@webconsulting/typo3-x402-react",
-  "version": "1.2.0",
+  "version": "1.0.0",
   "description": "React/Next.js components for x402 payment UI with TYPO3 headless backend",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

@@ -9,8 +9,10 @@ use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
 use TYPO3\CMS\Core\Http\RequestFactory;
 use TYPO3\CMS\Core\Http\JsonResponse;
+use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Site\SiteFinder;
 use Webconsulting\X402Paywall\Service\PaymentLogger;
+use Webconsulting\X402Paywall\Utility\HttpUrl;
 use Webconsulting\X402Paywall\Utility\Json;
 
 /**
@@ -18,6 +20,8 @@ use Webconsulting\X402Paywall\Utility\Json;
  */
 final readonly class PaywallDashboardController
 {
+    private const LANGUAGE_FILE = 'LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:';
+
     public function __construct(
         private ModuleTemplateFactory $moduleTemplateFactory,
         private PaymentLogger $paymentLogger,
@@ -49,7 +53,7 @@ final readonly class PaywallDashboardController
             'recentTransactions' => $recentTx,
         ]);
 
-        $moduleTemplate->setTitle('x402 Payment Dashboard');
+        $moduleTemplate->setTitle($this->translate('mlang_labels_tablabel'));
 
         return $moduleTemplate->renderResponse('Dashboard/Main');
     }
@@ -57,7 +61,7 @@ final readonly class PaywallDashboardController
     public function simulatorAction(ServerRequestInterface $request): ResponseInterface
     {
         $moduleTemplate = $this->moduleTemplateFactory->create($request);
-        $moduleTemplate->setTitle('x402 Flow Simulator');
+        $moduleTemplate->setTitle($this->translate('simulator.title'));
 
         // Collect site base URLs for pre-filled scenarios
         $siteBaseUrls = [];
@@ -73,38 +77,38 @@ final readonly class PaywallDashboardController
         $scenarios = [
             [
                 'id' => 'plain_get',
-                'label' => 'Plain GET → expects 402',
+                'label' => $this->translate('simulator.scenario.plain_get.label'),
                 'url' => $baseUrl . '/premium-content',
                 'signature' => '',
-                'description' => 'A client requests a gated resource with no payment. TYPO3 returns 402 with payment requirements.',
+                'description' => $this->translate('simulator.scenario.plain_get.description'),
             ],
             [
                 'id' => 'mock_signature',
-                'label' => 'Mock signature → facilitator rejects',
+                'label' => $this->translate('simulator.scenario.mock_signature.label'),
                 'url' => $baseUrl . '/premium-content',
                 'signature' => 'mock',
-                'description' => 'Client sends a fake PAYMENT-SIGNATURE. The facilitator at x402.org will reject it — confirms the verification path is wired.',
+                'description' => $this->translate('simulator.scenario.mock_signature.description'),
             ],
             [
                 'id' => 'news_detail',
-                'label' => 'News detail (EXT:news plugin)',
+                'label' => $this->translate('simulator.scenario.news_detail.label'),
                 'url' => $baseUrl . '/news/detail?tx_news_pi1[news]=1&tx_news_pi1[action]=detail',
                 'signature' => '',
-                'description' => 'Gated news article via EXT:news plugin. ContentTypeResolver maps this to content_type=news, content_uid=1.',
+                'description' => $this->translate('simulator.scenario.news_detail.description'),
             ],
             [
                 'id' => 'api_route',
-                'label' => 'Headless API route',
+                'label' => $this->translate('simulator.scenario.api_route.label'),
                 'url' => $baseUrl . '/api/v1/content/42',
                 'signature' => '',
-                'description' => 'A headless API endpoint gated via route pattern. AI agents hit this to fetch paid content.',
+                'description' => $this->translate('simulator.scenario.api_route.description'),
             ],
             [
                 'id' => 'facilitator_check',
-                'label' => 'Facilitator health check',
+                'label' => $this->translate('simulator.scenario.facilitator_check.label'),
                 'url' => 'https://x402.org/facilitator',
                 'signature' => '',
-                'description' => 'Checks if the Coinbase x402 facilitator is reachable. Expects a 200 response.',
+                'description' => $this->translate('simulator.scenario.facilitator_check.description'),
             ],
         ];
 
@@ -124,14 +128,14 @@ final readonly class PaywallDashboardController
         try {
             $body = Json::decodeObject((string)$request->getBody());
         } catch (\JsonException) {
-            return new JsonResponse(['error' => 'Invalid JSON body'], 400);
+            return $this->jsonError('simulator.error.invalid_json', 400);
         }
 
         $url = $this->nonEmptyString($body['url'] ?? null);
         $signatureMode = $this->nonEmptyString($body['signature'] ?? null);
 
         if ($url === '') {
-            return new JsonResponse(['error' => 'No URL provided'], 400);
+            return $this->jsonError('simulator.error.missing_url', 400);
         }
 
         $headers = [
@@ -154,8 +158,8 @@ final readonly class PaywallDashboardController
         try {
             $steps[] = ['type' => 'send', 'message' => 'GET ' . $url, 'ms' => 0];
 
-            if (!$this->isAllowedHttpUrl($url)) {
-                return new JsonResponse(['error' => 'Only http and https URLs are supported'], 400);
+            if (!HttpUrl::isAllowedOutboundHttpUrl($url)) {
+                return $this->jsonError('simulator.error.disallowed_url', 400);
             }
 
             $response = $this->requestFactory->request($url, 'GET', [
@@ -238,11 +242,9 @@ final readonly class PaywallDashboardController
         ]);
     }
 
-    private function isAllowedHttpUrl(string $url): bool
+    private function jsonError(string $labelKey, int $statusCode): JsonResponse
     {
-        $scheme = parse_url($url, PHP_URL_SCHEME);
-
-        return $scheme === 'http' || $scheme === 'https';
+        return new JsonResponse(['error' => $this->translate($labelKey)], $statusCode);
     }
 
     private function timestamp(string $modifier): int
@@ -261,5 +263,18 @@ final readonly class PaywallDashboardController
         $stringValue = trim((string)$value);
 
         return $stringValue !== '' ? $stringValue : $default;
+    }
+
+    private function translate(string $key): string
+    {
+        $languageService = $GLOBALS['LANG'] ?? null;
+        if ($languageService instanceof LanguageService) {
+            $label = $languageService->sL(self::LANGUAGE_FILE . $key);
+            if ($label !== '') {
+                return $label;
+            }
+        }
+
+        return $key;
     }
 }

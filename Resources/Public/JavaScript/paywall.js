@@ -23,6 +23,7 @@ async function x402Pay(pageUid) {
 
     const btn = document.getElementById('x402-pay-btn-' + pageUid);
     const errorEl = document.getElementById('x402-error-' + pageUid);
+    const labels = getLabels(container);
 
     // Parse payment requirement from data attribute
     const requirementJson = container.dataset.x402Requirement;
@@ -30,7 +31,7 @@ async function x402Pay(pageUid) {
     const verifyEndpoint = container.dataset.x402VerifyEndpoint || '/x402/verify';
 
     if (!requirementJson) {
-        showError(errorEl, 'Payment configuration missing.');
+        showError(errorEl, labels.missingConfig);
         return;
     }
 
@@ -38,20 +39,18 @@ async function x402Pay(pageUid) {
     try {
         requirement = JSON.parse(requirementJson);
     } catch {
-        showError(errorEl, 'Invalid payment configuration.');
+        showError(errorEl, labels.invalidConfig);
         return;
     }
 
     // Set loading state
-    setButtonLoading(btn, true);
+    setButtonLoading(btn, true, labels.processing);
     hideError(errorEl);
 
     try {
         // Step 1: Check for wallet
         if (typeof window.ethereum === 'undefined') {
-            showError(errorEl,
-                'No wallet detected. Please install MetaMask, Coinbase Wallet, or another EIP-1193 compatible wallet.'
-            );
+            showError(errorEl, labels.noWallet);
             setButtonLoading(btn, false);
             return;
         }
@@ -59,7 +58,7 @@ async function x402Pay(pageUid) {
         // Step 2: Request account access
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
         if (!accounts || accounts.length === 0) {
-            showError(errorEl, 'No account selected. Please connect your wallet.');
+            showError(errorEl, labels.noAccount);
             setButtonLoading(btn, false);
             return;
         }
@@ -69,7 +68,7 @@ async function x402Pay(pageUid) {
         // Step 3: Sign the payment authorization (EIP-712)
         const signature = await signPayment(payerAddress, requirement);
         if (!signature) {
-            showError(errorEl, 'Payment signature was cancelled.');
+            showError(errorEl, labels.signatureCancelled);
             setButtonLoading(btn, false);
             return;
         }
@@ -105,12 +104,12 @@ async function x402Pay(pageUid) {
             // Reload page content without paywall
             window.location.reload();
         } else {
-            showError(errorEl, verifyResult.error || 'Payment verification failed. Please try again.');
+            showError(errorEl, labels.verificationFailed);
             setButtonLoading(btn, false);
         }
     } catch (err) {
         console.error('[x402] Payment error:', err);
-        showError(errorEl, err.message || 'An unexpected error occurred.');
+        showError(errorEl, labels.unexpected);
         setButtonLoading(btn, false);
     }
 }
@@ -193,17 +192,38 @@ function hideError(el) {
 }
 
 /**
+ * Read localized labels provided by the Fluid template.
+ * @param {HTMLElement} container
+ * @returns {Record<string, string>}
+ */
+function getLabels(container) {
+    return {
+        invalidConfig: container.dataset.x402LabelInvalidConfig || '',
+        missingConfig: container.dataset.x402LabelMissingConfig || '',
+        noAccount: container.dataset.x402LabelNoAccount || '',
+        noWallet: container.dataset.x402LabelNoWallet || '',
+        processing: container.dataset.x402LabelProcessing || '',
+        signatureCancelled: container.dataset.x402LabelSignatureCancelled || '',
+        unexpected: container.dataset.x402LabelUnexpected || '',
+        verificationFailed: container.dataset.x402LabelVerificationFailed || '',
+    };
+}
+
+/**
  * Set button loading state.
  * @param {HTMLElement|null} btn
  * @param {boolean} loading
+ * @param {string} processingLabel
  */
-function setButtonLoading(btn, loading) {
+function setButtonLoading(btn, loading, processingLabel = '') {
     if (!btn) return;
     btn.disabled = loading;
     if (loading) {
-        btn.dataset.originalText = btn.textContent;
-        btn.innerHTML = '<span class="x402-paywall__spinner"></span>Processing...';
+        btn.dataset.originalText = btn.textContent.trim();
+        btn.innerHTML = '<span class="x402-paywall__spinner"></span>' + processingLabel;
     } else {
-        btn.textContent = btn.dataset.originalText || 'Pay';
+        btn.textContent = btn.dataset.originalText || '';
     }
 }
+
+window.x402Pay = x402Pay;

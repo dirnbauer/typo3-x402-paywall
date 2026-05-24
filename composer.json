@@ -66,7 +66,7 @@
     "extra": {
         "typo3/cms": {
             "extension-key": "x402_paywall",
-            "version": "2.0.0",
+            "version": "1.0.0",
             "Package": {
                 "providesPackages": {}
             }

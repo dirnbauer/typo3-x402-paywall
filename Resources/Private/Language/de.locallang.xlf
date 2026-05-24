@@ -1,64 +1,76 @@
 <?xml version="1.0" encoding="utf-8"?>
-<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="en">
+<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="en" trgLang="de">
     <file id="messages" original="messages">
         <unit id="paywall.title">
             <segment>
                 <source>Premium content</source>
+                <target>Premium-Inhalt</target>
             </segment>
         </unit>
         <unit id="paywall.pay_button">
             <segment>
                 <source>Pay</source>
+                <target>Bezahlen</target>
             </segment>
         </unit>
         <unit id="paywall.processing">
             <segment>
                 <source>Processing...</source>
+                <target>Wird verarbeitet...</target>
             </segment>
         </unit>
         <unit id="paywall.powered_by">
             <segment>
                 <source>Powered by</source>
+                <target>Bereitgestellt von</target>
             </segment>
         </unit>
         <unit id="paywall.network_prefix">
             <segment>
                 <source>via x402 on</source>
+                <target>via x402 auf</target>
             </segment>
         </unit>
         <unit id="paywall.error.missing_config">
             <segment>
                 <source>Payment configuration is missing.</source>
+                <target>Die Zahlungskonfiguration fehlt.</target>
             </segment>
         </unit>
         <unit id="paywall.error.invalid_config">
             <segment>
                 <source>Payment configuration is invalid.</source>
+                <target>Die Zahlungskonfiguration ist ungültig.</target>
             </segment>
         </unit>
         <unit id="paywall.error.no_wallet">
             <segment>
                 <source>No wallet detected. Please install MetaMask, Coinbase Wallet, or another EIP-1193 compatible wallet.</source>
+                <target>Keine Wallet erkannt. Bitte installieren Sie MetaMask, Coinbase Wallet oder eine andere EIP-1193-kompatible Wallet.</target>
             </segment>
         </unit>
         <unit id="paywall.error.no_account">
             <segment>
                 <source>No account selected. Please connect your wallet.</source>
+                <target>Kein Konto ausgewählt. Bitte verbinden Sie Ihre Wallet.</target>
             </segment>
         </unit>
         <unit id="paywall.error.signature_cancelled">
             <segment>
                 <source>Payment signature was cancelled.</source>
+                <target>Die Zahlungssignatur wurde abgebrochen.</target>
             </segment>
         </unit>
         <unit id="paywall.error.verification_failed">
             <segment>
                 <source>Payment verification failed. Please try again.</source>
+                <target>Die Zahlungsprüfung ist fehlgeschlagen. Bitte versuchen Sie es erneut.</target>
             </segment>
         </unit>
         <unit id="paywall.error.unexpected">
             <segment>
                 <source>An unexpected payment error occurred.</source>
+                <target>Es ist ein unerwarteter Zahlungsfehler aufgetreten.</target>
             </segment>
         </unit>
     </file>

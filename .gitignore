@@ -1,7 +1,9 @@
 /vendor/
 /var/
+/public/
 /.php-cs-fixer.cache
 /phpunit.xml
+.phpunit.cache/
 .phpunit.result.cache
 composer.lock
 .idea/

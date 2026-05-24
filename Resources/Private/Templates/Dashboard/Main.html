@@ -12,30 +12,30 @@
     <div class="row mb-4">
         <div class="col-md-3">
             <div class="card card-body">
-                <h6 class="text-muted">Today</h6>
+                <h6 class="text-muted"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.period.today" /></h6>
                 <h3 class="mb-0">{statsToday.total_revenue} USDC</h3>
-                <small class="text-muted">{statsToday.total_transactions} transactions</small>
+                <small class="text-muted">{statsToday.total_transactions} <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.transactions" /></small>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card card-body">
-                <h6 class="text-muted">Last 7 Days</h6>
+                <h6 class="text-muted"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.period.last_7_days" /></h6>
                 <h3 class="mb-0">{stats7d.total_revenue} USDC</h3>
-                <small class="text-muted">{stats7d.total_transactions} transactions</small>
+                <small class="text-muted">{stats7d.total_transactions} <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.transactions" /></small>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card card-body">
-                <h6 class="text-muted">Last 30 Days</h6>
+                <h6 class="text-muted"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.period.last_30_days" /></h6>
                 <h3 class="mb-0">{stats30d.total_revenue} USDC</h3>
-                <small class="text-muted">{stats30d.total_transactions} transactions</small>
+                <small class="text-muted">{stats30d.total_transactions} <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.transactions" /></small>
             </div>
         </div>
         <div class="col-md-3">
             <div class="card card-body">
-                <h6 class="text-muted">All Time</h6>
+                <h6 class="text-muted"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.period.all_time" /></h6>
                 <h3 class="mb-0">{statsAll.total_revenue} USDC</h3>
-                <small class="text-muted">{statsAll.total_transactions} transactions</small>
+                <small class="text-muted">{statsAll.total_transactions} <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.transactions" /></small>
             </div>
         </div>
     </div>
@@ -45,15 +45,15 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Top Pages (30 Days)</h5>
+                    <h5 class="card-title mb-0"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.top_pages" /></h5>
                 </div>
                 <div class="card-body p-0">
                     <table class="table table-striped mb-0">
                         <thead>
                             <tr>
-                                <th>Page UID</th>
-                                <th class="text-end">Transactions</th>
-                                <th class="text-end">Revenue (USDC)</th>
+                                <th><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.page_uid" /></th>
+                                <th class="text-end"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.transactions" /></th>
+                                <th class="text-end"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.revenue_usdc" /></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -71,7 +71,7 @@
                             <f:if condition="{topPages -> f:count()} == 0">
                                 <tr>
                                     <td colspan="3" class="text-center text-muted py-4">
-                                        No payments recorded yet. Configure gated pages and wait for traffic.
+                                        <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.no_payments" />
                                     </td>
                                 </tr>
                             </f:if>
@@ -85,17 +85,17 @@
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Recent Transactions</h5>
+                    <h5 class="card-title mb-0"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.recent_transactions" /></h5>
                 </div>
                 <div class="card-body p-0">
                     <table class="table table-striped mb-0">
                         <thead>
                             <tr>
-                                <th>Time</th>
-                                <th>Page</th>
-                                <th class="text-end">Amount</th>
-                                <th>Network</th>
-                                <th>Status</th>
+                                <th><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.time" /></th>
+                                <th><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.page" /></th>
+                                <th class="text-end"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.amount" /></th>
+                                <th><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.network" /></th>
+                                <th><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.status" /></th>
                             </tr>
                         </thead>
                         <tbody>
@@ -109,7 +109,7 @@
                                     <td><span class="badge badge-secondary">{tx.network}</span></td>
                                     <td>
                                         <f:if condition="{tx.status} == 'settled'">
-                                            <f:then><span class="badge badge-success">settled</span></f:then>
+                                            <f:then><span class="badge badge-success"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.status.settled" /></span></f:then>
                                             <f:else><span class="badge badge-warning">{tx.status}</span></f:else>
                                         </f:if>
                                     </td>
@@ -118,7 +118,7 @@
                             <f:if condition="{recentTransactions -> f:count()} == 0">
                                 <tr>
                                     <td colspan="5" class="text-center text-muted py-4">
-                                        No transactions yet.
+                                        <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.no_transactions" />
                                     </td>
                                 </tr>
                             </f:if>
@@ -134,16 +134,15 @@
         <div class="col-12">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Configuration</h5>
+                    <h5 class="card-title mb-0"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.configuration" /></h5>
                 </div>
                 <div class="card-body">
                     <p class="text-muted">
-                        Configure x402 paywall settings in your site configuration
-                        (<code>config/sites/&lt;identifier&gt;/config.yaml</code>).
-                        Enable paywall per page via the "x402 Paywall" tab in page properties.
+                        <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.configuration.help" />
+                        <code>config/sites/&lt;identifier&gt;/config.yaml</code>
                     </p>
                     <a href="https://github.com/dirnbauer/typo3-x402-paywall" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm">
-                        Documentation on GitHub
+                        <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.documentation" />
                     </a>
                 </div>
             </div>
