@@ -16,16 +16,16 @@
     ],
     "authors": [
         {
-            "name": "Kurt Dirnbauer",
+            "name": "webconsulting",
             "email": "office@webconsulting.at",
             "homepage": "https://www.webconsulting.at",
             "role": "Lead Developer"
         }
     ],
-    "homepage": "https://github.com/dirnbauer/typo3-x402-paywall",
+    "homepage": "https://github.com/webconsulting-at/typo3-x402-paywall",
     "support": {
-        "issues": "https://github.com/dirnbauer/typo3-x402-paywall/issues",
-        "source": "https://github.com/dirnbauer/typo3-x402-paywall"
+        "issues": "https://github.com/webconsulting-at/typo3-x402-paywall/issues",
+        "source": "https://github.com/webconsulting-at/typo3-x402-paywall"
     },
     "require": {
         "php": "^8.2",
@@ -66,7 +66,7 @@
     "extra": {
         "typo3/cms": {
             "extension-key": "x402_paywall",
-            "version": "1.0.0",
+            "version": "1.0.1",
             "Package": {
                 "providesPackages": {}
             }

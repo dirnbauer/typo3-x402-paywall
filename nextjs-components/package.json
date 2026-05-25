@@ -9,7 +9,7 @@
   "author": "webconsulting.at",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dirnbauer/typo3-x402-paywall",
+    "url": "https://github.com/webconsulting-at/typo3-x402-paywall",
     "directory": "nextjs-components"
   },
   "keywords": ["x402", "typo3", "payment", "paywall", "wallet-connect", "react", "nextjs"],

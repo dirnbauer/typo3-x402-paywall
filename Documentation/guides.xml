@@ -11,18 +11,18 @@
         title="TYPO3 x402 Paywall"
         version="1.0"
         release="1.0.0"
-        copyright="since 2026 by Kurt Dirnbauer"
+        copyright="since 2026 by webconsulting"
     />
 
     <extension
         class="\T3Docs\Typo3DocsTheme\DependencyInjection\Typo3DocsThemeExtension"
         typo3-core-preferred="stable"
         interlink-shortcode="webconsulting/typo3-x402-paywall"
-        project-home="https://github.com/dirnbauer/typo3-x402-paywall"
-        project-contact="https://github.com/dirnbauer/typo3-x402-paywall/issues"
-        project-repository="https://github.com/dirnbauer/typo3-x402-paywall"
-        project-issues="https://github.com/dirnbauer/typo3-x402-paywall/issues"
-        edit-on-github="dirnbauer/typo3-x402-paywall"
+        project-home="https://github.com/webconsulting-at/typo3-x402-paywall"
+        project-contact="https://github.com/webconsulting-at/typo3-x402-paywall/issues"
+        project-repository="https://github.com/webconsulting-at/typo3-x402-paywall"
+        project-issues="https://github.com/webconsulting-at/typo3-x402-paywall/issues"
+        edit-on-github="webconsulting-at/typo3-x402-paywall"
         edit-on-github-branch="main"
         edit-on-github-directory="Documentation"
     />
