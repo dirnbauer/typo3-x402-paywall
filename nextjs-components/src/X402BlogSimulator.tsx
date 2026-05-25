@@ -563,7 +563,7 @@ export function X402BlogSimulator() {
       }}>
         Diese Simulation läuft vollständig im Browser. Für echte Tests mit Base Sepolia Testnet-USDC (kostenlos):
         {" "}<a href="https://faucet.circle.com" target="_blank" rel="noopener noreferrer" style={{ color: C.primaryLight }}>faucet.circle.com</a>
-        {" "}· <a href="https://github.com/webconsulting-at/typo3-x402-paywall" target="_blank" rel="noopener noreferrer" style={{ color: C.primaryLight }}>GitHub</a>
+        {" "}· <a href="https://github.com/dirnbauer/typo3-x402-paywall" target="_blank" rel="noopener noreferrer" style={{ color: C.primaryLight }}>GitHub</a>
       </p>
     </div>
   );
