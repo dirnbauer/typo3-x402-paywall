@@ -3,6 +3,18 @@
 All notable changes to `webconsulting/typo3-x402-paywall` are documented in
 this file.
 
+## [1.1.0] - 2026-08-06
+
+### Changed
+
+- Removed the conflicting legacy `mcp/sdk` runtime dependency.
+- MCP tools now return SDK-neutral strings; the TYPO3 MCP server adapter
+  converts them to the installed SDK's result types.
+
+### Added
+
+- Unit coverage for successful and exceptional SDK-neutral tool execution.
+
 ## [1.0.0] - 2026-05-24
 
 ### Added

@@ -34,7 +34,6 @@
         "typo3/cms-extbase": "^14.3",
         "typo3/cms-fluid": "^14.3",
         "typo3/cms-frontend": "^14.3",
-        "mcp/sdk": "^0.5",
         "psr/http-message": "^2.0",
         "psr/http-server-middleware": "^1.0"
     },
@@ -46,6 +45,9 @@
         "phpstan/phpstan-strict-rules": "^2.0",
         "phpunit/phpunit": "^11.5",
         "saschaegerer/phpstan-typo3": "^3.0"
+    },
+    "suggest": {
+        "hn/typo3-mcp-server": "Exposes the SDK-neutral tagged x402 tools through MCP; both the legacy and current server adapters are supported."
     },
     "autoload": {
         "psr-4": {
@@ -66,7 +68,7 @@
     "extra": {
         "typo3/cms": {
             "extension-key": "x402_paywall",
-            "version": "1.0.2",
+            "version": "1.1.0",
             "Package": {
                 "providesPackages": {}
             }

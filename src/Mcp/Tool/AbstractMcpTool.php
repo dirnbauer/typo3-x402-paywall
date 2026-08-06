@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Webconsulting\X402Paywall\Mcp\Tool;
 
-use Mcp\Schema\Content\TextContent;
-use Mcp\Schema\Result\CallToolResult;
 use Webconsulting\X402Paywall\Utility\Json;
 
 abstract class AbstractMcpTool
@@ -30,18 +28,14 @@ abstract class AbstractMcpTool
     /**
      * @param array<string, mixed> $args
      */
-    public function execute(array $args): CallToolResult
+    public function execute(array $args): string
     {
         try {
-            return new CallToolResult([
-                new TextContent($this->doExecute($args)),
-            ]);
+            return $this->doExecute($args);
         } catch (\Throwable $exception) {
-            return CallToolResult::error([
-                new TextContent(Json::encode([
-                    'error' => $exception->getMessage(),
-                ], JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)),
-            ]);
+            return Json::encode([
+                'error' => $exception->getMessage(),
+            ], JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
         }
     }
 

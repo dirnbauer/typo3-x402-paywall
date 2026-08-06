@@ -37,6 +37,14 @@ The extension registers tools with the ``mcp.tool`` service tag:
 These tools are intended for TYPO3 MCP server integrations and agent
 workflows.
 
+The tools deliberately do not depend on a concrete MCP SDK. Their tagged
+services expose schemas and return plain strings; the TYPO3 MCP server's
+compatibility adapter converts those results into the installed SDK's native
+result objects. This keeps the extension compatible with both the legacy
+``logiscape/mcp-sdk-php`` 1.x server line and the current 2.x server line,
+without co-installing packages that expose incompatible classes below the
+same ``Mcp\`` namespace.
+
 ..  _developer-react:
 
 React and Next.js source package
