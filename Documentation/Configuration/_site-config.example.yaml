@@ -1,53 +1,51 @@
-# Example TYPO3 site configuration with x402 paywall
-# Add this to your config/sites/<site-identifier>/config.yaml
+# Example TYPO3 site configuration with the x402 paywall.
+# Add the x402_paywall block to config/sites/<site-identifier>/config.yaml
 
 base: https://www.example.com
 languages:
-  - title: Deutsch
+  - title: English
     languageId: 0
-    locale: de_AT.UTF-8
+    locale: en_US.UTF-8
     base: /
 
 x402_paywall:
   enabled: true
 
-  # Your wallet address to receive payments (Ethereum/Base address)
-  wallet_address: "0xYOUR_WALLET_ADDRESS_HERE"
+  # Wallet that receives the payments (EVM address)
+  wallet_address: "0xYOUR_WALLET_ADDRESS"
 
-  # Network: base, base-sepolia (testnet), polygon, ethereum
-  network: "base-sepolia"
+  # Network alias (base, base-sepolia, polygon, arbitrum, ethereum) or a CAIP-2 id such as eip155:8453
+  network: base-sepolia
 
-  # x402 facilitator URL (Coinbase default)
-  facilitator_url: "https://x402.org/facilitator"
+  # x402 facilitator, called on /verify, /settle and /supported
+  facilitator_url: https://x402.org/facilitator
 
-  # Payment currency
-  currency: "USDC"
-
-  # Default price per request (in USDC)
+  # Currency label and default price (decimal, in the asset's units)
+  currency: USDC
   default_price: "0.01"
 
-  # Pricing mode: per-request or per-page
-  pricing_mode: "per-request"
+  # Token used for payment. Leave empty for USDC on the well-known networks.
+  # asset_address: "0x..."
+  # asset_decimals: 6
+  # asset_name: "USD Coin"    # EIP-712 domain name of the token
+  # asset_version: "2"        # EIP-712 domain version of the token
 
-  # Number of preview paragraphs before paywall (0 = full paywall)
-  free_preview_paragraphs: 2
+  # Seconds a signed authorization stays valid
+  max_timeout_seconds: 300
 
-  # Routes that are always free (no payment required)
+  # Routes that always stay free (exact path, /prefix/* or glob)
   free_routes:
-    - "/api/v1/health"
-    - "/api/v1/sitemap"
-    - "/api/v1/navigation"
     - "/"
-    - "/impressum"
-    - "/datenschutz"
+    - "/api/v1/health"
+    - "/api/v1/public/*"
 
-  # Route patterns that require payment (for headless/API mode)
-  # Use * as wildcard
+  # Routes that require payment (headless / API mode)
   gated_route_patterns:
     - "/api/v1/content/*"
-    - "/api/v1/articles/*"
     - "/api/v1/premium/*"
 
-  # Specific page UIDs that require payment (for traditional frontend)
-  # Alternatively, use the per-page toggle in the TYPO3 backend
+  # Page UIDs that require payment without the page toggle
   gated_page_uids: []
+
+  # Also accept x402 v1 clients (X-PAYMENT header, v1 JSON body)
+  legacy_v1: false

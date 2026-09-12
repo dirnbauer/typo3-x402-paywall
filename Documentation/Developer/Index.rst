@@ -6,70 +6,117 @@
 Developer
 =========
 
+..  _developer-services:
+
+Services
+========
+
+All classes are registered in :file:`Configuration/Services.yaml` and can be
+injected:
+
+:php:`Webconsulting\X402Paywall\Configuration\ConfigurationProvider`
+    Reads the ``x402_paywall`` block of the current site into a
+    :php:`PaywallConfiguration` value object.
+
+:php:`Webconsulting\X402Paywall\Service\RouteGateResolver`
+    Decides whether a request is gated and resolves price and description.
+
+:php:`Webconsulting\X402Paywall\Service\PaymentVerifier`
+    Facilitator client: :php:`verify()`, :php:`settle()`, :php:`supported()`
+    and :php:`supportsRequirement()`.
+
+:php:`Webconsulting\X402Paywall\Http\PaymentRequiredResponseFactory`
+    Builds 402 responses (JSON or the HTML paywall page) with the
+    ``PAYMENT-REQUIRED`` header.
+
+:php:`Webconsulting\X402Paywall\Service\PaymentLogger`
+    Writes :sql:`tx_x402_payment_log` and provides the dashboard queries.
+
+Domain models in :php:`Webconsulting\X402Paywall\Domain\Model` mirror the
+specification: :php:`PaymentRequired` (header document), :php:`ResourceInfo`,
+:php:`PaymentRequirement` and :php:`PaymentPayload`. All of them offer
+:php:`fromArray()` / :php:`toArray()` and header encoding helpers.
+
 ..  _developer-events:
 
 Events
 ======
 
-The middleware dispatches two PSR-14 events:
-
 ..  php:class:: Webconsulting\X402Paywall\Event\PaymentRequiredEvent
 
-    Dispatched before TYPO3 returns a 402 response.
+    Dispatched before a 402 response is returned. Properties:
+    ``requestUri``, ``price``, ``currency``, ``network`` (CAIP-2).
 
 ..  php:class:: Webconsulting\X402Paywall\Event\PaymentReceivedEvent
 
-    Dispatched after a payment was verified and settlement was attempted.
+    Dispatched after a payment was verified and settled and the resource is
+    served. Properties: ``requestUri``, ``price``, ``currency``, ``txHash``,
+    ``network``, ``payer``.
+
+..  _developer-middleware:
+
+Middleware position
+===================
+
+:php:`Webconsulting\X402Paywall\Middleware\X402PaywallMiddleware` runs in the
+frontend stack after ``typo3/cms-frontend/prepare-tsfe-rendering`` and
+``shortcut-and-mountpoint-redirect`` (so the resolved page record is
+available) and before ``csp-headers``. Settlement is only attempted when the
+inner handler produced a 2xx response.
 
 ..  _developer-mcp-tools:
 
 MCP tools
 =========
 
-The extension registers tools with the ``mcp.tool`` service tag:
+Tools are tagged ``mcp.tool`` and picked up by ``hn/typo3-mcp-server``. They
+return plain strings (JSON), the server adapter wraps them into the installed
+SDK's result type.
 
-* ``x402_probe``
-* ``x402_gated_pages``
-* ``x402_stats``
-* ``x402_transactions``
-* ``x402_decode_header``
+..  t3-field-list-table::
+    :header-rows: 1
 
-These tools are intended for TYPO3 MCP server integrations and agent
-workflows.
+    -   :Tool: Tool
+        :Input: Input
+        :Purpose: Purpose
 
-The tools deliberately do not depend on a concrete MCP SDK. Their tagged
-services expose schemas and return plain strings; the TYPO3 MCP server's
-compatibility adapter converts those results into the installed SDK's native
-result objects. This keeps the extension compatible with both the legacy
-``logiscape/mcp-sdk-php`` 1.x server line and the current 2.x server line,
-without co-installing packages that expose incompatible classes below the
-same ``Mcp\`` namespace.
+    -   :Tool: ``x402_probe``
+        :Input: ``url``
+        :Purpose: GET a public URL and decode a 402 (v2 header; v1 bodies are
+            flagged ``legacy``). Private and loopback targets are refused.
 
-..  _developer-react:
+    -   :Tool: ``x402_decode_header``
+        :Input: ``header``, ``decimals`` (default 6)
+        :Purpose: Decode and explain ``PAYMENT-REQUIRED``,
+            ``PAYMENT-SIGNATURE`` / ``X-PAYMENT`` or ``PAYMENT-RESPONSE``
+            values.
 
-React and Next.js source package
-================================
+    -   :Tool: ``x402_gated_pages``
+        :Input: none
+        :Purpose: Pages with the paywall toggle, price override and prompt.
 
-The ``nextjs-components/`` directory contains an optional React/Next.js
-companion package:
+    -   :Tool: ``x402_stats``
+        :Input: ``period`` (today, 7days, 30days, all)
+        :Purpose: Settled revenue, transaction count and top pages.
 
-..  code-block:: bash
-    :caption: React package installation after publishing
-
-    npm install @webconsulting/typo3-x402-react
-
-The package contains a hook, overlay component, paid-content wrapper, client,
-and Next.js middleware helper.
+    -   :Tool: ``x402_transactions``
+        :Input: ``limit`` (1-50)
+        :Purpose: Recent log entries with status, payer and transaction hash.
 
 ..  _developer-quality-gates:
 
 Quality gates
 =============
 
-Run the local release checks from the project root:
-
 ..  code-block:: bash
-    :caption: Local quality gates
+    :caption: Local checks (PHP 8.4+, sqlite for functional tests)
 
-    composer validate --strict
-    Build/Scripts/runTests.sh -s ci
+    composer install
+    composer validate --strict && composer audit
+    composer ci                                   # lint, cgl, phpstan (max), unit, functional
+    Build/Scripts/runTests.sh -s functional -d mariadb
+
+Unit tests live in :file:`tests/Unit`, the functional test in
+:file:`tests/Functional` runs the real frontend middleware stack against a
+gated page. GitHub Actions executes the same suites on PHP 8.4 (8.5 as
+allowed failure) with sqlite and MariaDB 10.11.

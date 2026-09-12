@@ -3,3 +3,4 @@
 ..  |extension_key| replace:: x402_paywall
 ..  |composer_name| replace:: webconsulting/typo3-x402-paywall
 ..  |extension_name| replace:: TYPO3 x402 Paywall
+..  |x402_spec| replace:: x402 specification v2.0 (2025-12-09)
