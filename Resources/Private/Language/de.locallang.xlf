@@ -3,8 +3,8 @@
     <file id="messages" original="messages">
         <unit id="paywall.title">
             <segment>
-                <source>Premium content</source>
-                <target>Premium-Inhalt</target>
+                <source>Payment required</source>
+                <target>Zahlung erforderlich</target>
             </segment>
         </unit>
         <unit id="paywall.pay_button">
@@ -16,19 +16,31 @@
         <unit id="paywall.processing">
             <segment>
                 <source>Processing...</source>
-                <target>Wird verarbeitet...</target>
+                <target>Wird verarbeitet ...</target>
+            </segment>
+        </unit>
+        <unit id="paywall.success">
+            <segment>
+                <source>Payment accepted, loading content...</source>
+                <target>Zahlung akzeptiert, Inhalt wird geladen ...</target>
             </segment>
         </unit>
         <unit id="paywall.powered_by">
             <segment>
                 <source>Powered by</source>
-                <target>Bereitgestellt von</target>
+                <target>Bereitgestellt durch</target>
             </segment>
         </unit>
         <unit id="paywall.network_prefix">
             <segment>
                 <source>via x402 on</source>
-                <target>via x402 auf</target>
+                <target>über x402 auf</target>
+            </segment>
+        </unit>
+        <unit id="paywall.resource">
+            <segment>
+                <source>Resource:</source>
+                <target>Ressource:</target>
             </segment>
         </unit>
         <unit id="paywall.error.missing_config">
@@ -45,32 +57,38 @@
         </unit>
         <unit id="paywall.error.no_wallet">
             <segment>
-                <source>No wallet detected. Please install MetaMask, Coinbase Wallet, or another EIP-1193 compatible wallet.</source>
-                <target>Keine Wallet erkannt. Bitte installieren Sie MetaMask, Coinbase Wallet oder eine andere EIP-1193-kompatible Wallet.</target>
+                <source>No wallet found. Install an EIP-1193 wallet such as MetaMask, Coinbase Wallet or Rabby.</source>
+                <target>Keine Wallet gefunden. Installieren Sie eine EIP-1193-Wallet wie MetaMask, Coinbase Wallet oder Rabby.</target>
             </segment>
         </unit>
         <unit id="paywall.error.no_account">
             <segment>
-                <source>No account selected. Please connect your wallet.</source>
-                <target>Kein Konto ausgewählt. Bitte verbinden Sie Ihre Wallet.</target>
+                <source>No wallet account was selected.</source>
+                <target>Es wurde kein Wallet-Konto ausgewählt.</target>
+            </segment>
+        </unit>
+        <unit id="paywall.error.wrong_network">
+            <segment>
+                <source>Please switch your wallet to the required network.</source>
+                <target>Bitte wechseln Sie in Ihrer Wallet auf das erforderliche Netzwerk.</target>
             </segment>
         </unit>
         <unit id="paywall.error.signature_cancelled">
             <segment>
-                <source>Payment signature was cancelled.</source>
-                <target>Die Zahlungssignatur wurde abgebrochen.</target>
+                <source>The signature request was cancelled.</source>
+                <target>Die Signaturanfrage wurde abgebrochen.</target>
             </segment>
         </unit>
         <unit id="paywall.error.verification_failed">
             <segment>
-                <source>Payment verification failed. Please try again.</source>
-                <target>Die Zahlungsprüfung ist fehlgeschlagen. Bitte versuchen Sie es erneut.</target>
+                <source>The payment was not accepted.</source>
+                <target>Die Zahlung wurde nicht akzeptiert.</target>
             </segment>
         </unit>
         <unit id="paywall.error.unexpected">
             <segment>
-                <source>An unexpected payment error occurred.</source>
-                <target>Es ist ein unerwarteter Zahlungsfehler aufgetreten.</target>
+                <source>An unexpected error occurred. Please try again.</source>
+                <target>Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.</target>
             </segment>
         </unit>
     </file>

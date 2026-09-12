@@ -81,7 +81,7 @@ if (root) {
     function buildRequestPreview(url, signatureMode) {
         const lines = [`GET ${url}`, 'User-Agent: x402-simulator/TYPO3-backend'];
         if (signatureMode === 'mock') {
-            lines.push('PAYMENT-SIGNATURE: [mock base64]');
+            lines.push('PAYMENT-SIGNATURE: [base64 x402 v2 PaymentPayload with dummy signature]');
         }
 
         return lines.join('\n');

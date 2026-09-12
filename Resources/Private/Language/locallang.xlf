@@ -3,7 +3,7 @@
     <file id="messages" original="messages">
         <unit id="paywall.title">
             <segment>
-                <source>Premium content</source>
+                <source>Payment required</source>
             </segment>
         </unit>
         <unit id="paywall.pay_button">
@@ -16,6 +16,11 @@
                 <source>Processing...</source>
             </segment>
         </unit>
+        <unit id="paywall.success">
+            <segment>
+                <source>Payment accepted, loading content...</source>
+            </segment>
+        </unit>
         <unit id="paywall.powered_by">
             <segment>
                 <source>Powered by</source>
@@ -24,6 +29,11 @@
         <unit id="paywall.network_prefix">
             <segment>
                 <source>via x402 on</source>
+            </segment>
+        </unit>
+        <unit id="paywall.resource">
+            <segment>
+                <source>Resource:</source>
             </segment>
         </unit>
         <unit id="paywall.error.missing_config">
@@ -38,27 +48,32 @@
         </unit>
         <unit id="paywall.error.no_wallet">
             <segment>
-                <source>No wallet detected. Please install MetaMask, Coinbase Wallet, or another EIP-1193 compatible wallet.</source>
+                <source>No wallet found. Install an EIP-1193 wallet such as MetaMask, Coinbase Wallet or Rabby.</source>
             </segment>
         </unit>
         <unit id="paywall.error.no_account">
             <segment>
-                <source>No account selected. Please connect your wallet.</source>
+                <source>No wallet account was selected.</source>
+            </segment>
+        </unit>
+        <unit id="paywall.error.wrong_network">
+            <segment>
+                <source>Please switch your wallet to the required network.</source>
             </segment>
         </unit>
         <unit id="paywall.error.signature_cancelled">
             <segment>
-                <source>Payment signature was cancelled.</source>
+                <source>The signature request was cancelled.</source>
             </segment>
         </unit>
         <unit id="paywall.error.verification_failed">
             <segment>
-                <source>Payment verification failed. Please try again.</source>
+                <source>The payment was not accepted.</source>
             </segment>
         </unit>
         <unit id="paywall.error.unexpected">
             <segment>
-                <source>An unexpected payment error occurred.</source>
+                <source>An unexpected error occurred. Please try again.</source>
             </segment>
         </unit>
     </file>

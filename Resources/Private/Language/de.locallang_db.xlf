@@ -37,12 +37,6 @@
                 <target>x402 Zahlungstransaktion</target>
             </segment>
         </unit>
-        <unit id="plugin.paywall.title">
-            <segment>
-                <source>x402 paywall overlay</source>
-                <target>x402 Bezahlschranken-Overlay</target>
-            </segment>
-        </unit>
         <unit id="tx_x402_payment_log.page_uid">
             <segment>
                 <source>Page</source>

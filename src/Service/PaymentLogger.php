@@ -2,8 +2,17 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the TYPO3 extension "x402_paywall" by webconsulting.
+ *
+ * It is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License, either version 2
+ * of the License, or any later version.
+ */
+
 namespace Webconsulting\X402Paywall\Service;
 
+use Doctrine\DBAL\ParameterType;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Core\Crypto\HashAlgo;
 use TYPO3\CMS\Core\Crypto\HashService;
@@ -12,17 +21,22 @@ use Webconsulting\X402Paywall\Utility\Json;
 use Webconsulting\X402Paywall\Utility\ScalarValue;
 
 /**
- * Logs x402 payment transactions for revenue analytics.
+ * Writes and reads the payment log (tx_x402_payment_log) used by the dashboard and the MCP tools.
  */
 final class PaymentLogger
 {
+    public const TABLE = 'tx_x402_payment_log';
+
+    public const STATUS_SETTLED = 'settled';
+    public const STATUS_FAILED = 'failed';
+
     public function __construct(
         private readonly ConnectionPool $connectionPool,
         private readonly HashService $hashService,
     ) {}
 
     /**
-     * @param array<string, mixed> $settlementDetails
+     * @param array<string, mixed> $settlementDetails Raw facilitator response, stored for auditing
      */
     public function logPayment(
         ServerRequestInterface $request,
@@ -31,17 +45,17 @@ final class PaymentLogger
         string $currency,
         string $network,
         ?string $txHash,
-        string $status = 'settled',
+        string $status = self::STATUS_SETTLED,
         array $settlementDetails = [],
         string $contentType = 'page',
         int $contentUid = 0,
+        string $payerAddress = '',
     ): void {
-        $connection = $this->connectionPool->getConnectionForTable('tx_x402_payment_log');
-
-        $connection->insert('tx_x402_payment_log', [
+        $now = time();
+        $this->connectionPool->getConnectionForTable(self::TABLE)->insert(self::TABLE, [
             'pid' => $pageUid,
-            'tstamp' => time(),
-            'crdate' => time(),
+            'tstamp' => $now,
+            'crdate' => $now,
             'page_uid' => $pageUid,
             'content_type' => $contentType,
             'content_uid' => $contentUid > 0 ? $contentUid : $pageUid,
@@ -50,7 +64,7 @@ final class PaymentLogger
             'currency' => $currency,
             'network' => $network,
             'tx_hash' => $txHash ?? '',
-            'payer_address' => $this->extractPayerAddress($request),
+            'payer_address' => $payerAddress,
             'facilitator_response' => $settlementDetails !== [] ? Json::encode($settlementDetails) : '',
             'status' => $status,
             'user_agent' => substr($request->getHeaderLine('User-Agent'), 0, 500),
@@ -63,16 +77,16 @@ final class PaymentLogger
      */
     public function getStats(int $since = 0): array
     {
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_x402_payment_log');
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE);
         $queryBuilder
-            ->addSelectLiteral('COUNT(*) as cnt')
-            ->addSelectLiteral('COALESCE(SUM(CAST(amount as DECIMAL(20,6))), 0) as revenue')
-            ->from('tx_x402_payment_log')
-            ->where($queryBuilder->expr()->eq('status', $queryBuilder->createNamedParameter('settled')));
+            ->addSelectLiteral('COUNT(*) AS cnt')
+            ->addSelectLiteral('COALESCE(SUM(CAST(amount AS DECIMAL(20,6))), 0) AS revenue')
+            ->from(self::TABLE)
+            ->where($queryBuilder->expr()->eq('status', $queryBuilder->createNamedParameter(self::STATUS_SETTLED)));
 
         if ($since > 0) {
             $queryBuilder->andWhere(
-                $queryBuilder->expr()->gte('crdate', $queryBuilder->createNamedParameter($since, \Doctrine\DBAL\ParameterType::INTEGER))
+                $queryBuilder->expr()->gte('crdate', $queryBuilder->createNamedParameter($since, ParameterType::INTEGER)),
             );
         }
 
@@ -93,20 +107,20 @@ final class PaymentLogger
      */
     public function getTopPages(int $limit = 10, int $since = 0): array
     {
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_x402_payment_log');
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE);
         $queryBuilder
             ->select('page_uid')
-            ->addSelectLiteral('COUNT(*) as transactions')
-            ->addSelectLiteral('SUM(CAST(amount as DECIMAL(20,6))) as revenue')
-            ->from('tx_x402_payment_log')
-            ->where($queryBuilder->expr()->eq('status', $queryBuilder->createNamedParameter('settled')))
+            ->addSelectLiteral('COUNT(*) AS transactions')
+            ->addSelectLiteral('SUM(CAST(amount AS DECIMAL(20,6))) AS revenue')
+            ->from(self::TABLE)
+            ->where($queryBuilder->expr()->eq('status', $queryBuilder->createNamedParameter(self::STATUS_SETTLED)))
             ->groupBy('page_uid')
             ->orderBy('revenue', 'DESC')
             ->setMaxResults($limit);
 
         if ($since > 0) {
             $queryBuilder->andWhere(
-                $queryBuilder->expr()->gte('crdate', $queryBuilder->createNamedParameter($since, \Doctrine\DBAL\ParameterType::INTEGER))
+                $queryBuilder->expr()->gte('crdate', $queryBuilder->createNamedParameter($since, ParameterType::INTEGER)),
             );
         }
 
@@ -118,36 +132,16 @@ final class PaymentLogger
      */
     public function getRecentTransactions(int $limit = 20): array
     {
-        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('tx_x402_payment_log');
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE);
 
         return $queryBuilder
-            ->select('uid', 'crdate', 'page_uid', 'amount', 'currency', 'network', 'tx_hash', 'status', 'request_uri')
-            ->from('tx_x402_payment_log')
+            ->select('uid', 'crdate', 'page_uid', 'content_type', 'content_uid', 'amount', 'currency', 'network', 'tx_hash', 'payer_address', 'status', 'request_uri')
+            ->from(self::TABLE)
             ->orderBy('crdate', 'DESC')
+            ->addOrderBy('uid', 'DESC')
             ->setMaxResults($limit)
             ->executeQuery()
             ->fetchAllAssociative();
-    }
-
-    private function extractPayerAddress(ServerRequestInterface $request): string
-    {
-        $paymentHeader = $request->getHeaderLine('PAYMENT-SIGNATURE');
-        if ($paymentHeader === '') {
-            return '';
-        }
-
-        $decoded = base64_decode($paymentHeader, true);
-        if ($decoded === false) {
-            return '';
-        }
-
-        try {
-            $payload = Json::decodeObject($decoded);
-        } catch (\JsonException) {
-            return '';
-        }
-
-        return ScalarValue::string($payload['from'] ?? ($payload['payer'] ?? null));
     }
 
     private function hashIpAddress(string $ipAddress): string

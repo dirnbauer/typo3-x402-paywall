@@ -2,121 +2,190 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the TYPO3 extension "x402_paywall" by webconsulting.
+ *
+ * It is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License, either version 2
+ * of the License, or any later version.
+ */
+
 namespace Webconsulting\X402Paywall\Domain\Model;
 
-use Webconsulting\X402Paywall\Utility\Json;
+use Webconsulting\X402Paywall\Configuration\PaywallConfiguration;
+use Webconsulting\X402Paywall\Utility\ScalarValue;
 
 /**
- * Represents the x402 payment requirement returned in a 402 response.
- * Follows the x402 V2 specification.
+ * One x402 v2 "PaymentRequirements" object (an entry of PaymentRequired.accepts).
+ *
+ * Field set per x402 specification v2.0 (2025-12-09): scheme, network (CAIP-2), amount (atomic units),
+ * asset (token contract address), payTo, maxTimeoutSeconds and scheme-specific extra data. The EIP-712
+ * domain name/version of the token is carried in extra for the "exact" EVM scheme.
  */
-final class PaymentRequirement
+final readonly class PaymentRequirement
 {
+    /**
+     * @param array<string, mixed> $extra
+     */
     public function __construct(
-        public readonly string $scheme = 'exact',
-        public readonly string $network = '',
-        public readonly string $maxAmountRequired = '',
-        public readonly string $resource = '',
-        public readonly string $description = '',
-        public readonly string $mimeType = '',
-        public readonly int $maxTimeoutSeconds = 300,
-        public readonly string $payTo = '',
-        /** @var array{address: string, symbol: string, decimals: int} */
-        public readonly array $asset = ['address' => '', 'symbol' => '', 'decimals' => 0],
-        public readonly ?int $outputLength = null,
+        public string $scheme,
+        public string $network,
+        public string $amount,
+        public string $asset,
+        public string $payTo,
+        public int $maxTimeoutSeconds = PaywallConfiguration::DEFAULT_MAX_TIMEOUT_SECONDS,
+        public array $extra = [],
     ) {}
 
-    public static function fromConfig(
-        PaywallConfigLike $config,
-        string $requestUri,
-        string $price,
-        string $contentDescription = '',
-    ): self {
+    /**
+     * Builds the requirement for a human-readable price ("0.01") in the configured asset.
+     */
+    public static function fromConfig(PaywallConfiguration $config, string $price): self
+    {
         return new self(
-            scheme: 'exact',
+            scheme: PaywallConfiguration::SCHEME_EXACT,
             network: $config->getCaip2NetworkId(),
-            maxAmountRequired: self::toBaseUnits($price, 6), // USDC = 6 decimals
-            resource: $requestUri,
-            description: $contentDescription !== '' ? $contentDescription : "Access to $requestUri",
-            mimeType: 'application/json',
-            maxTimeoutSeconds: 300,
-            payTo: $config->getWalletAddress(),
-            asset: self::getAssetForCurrency($config->getCurrency(), $config->getNetwork()),
+            amount: self::toAtomicUnits($price, $config->assetDecimals),
+            asset: $config->getAssetAddress(),
+            payTo: $config->walletAddress,
+            maxTimeoutSeconds: $config->maxTimeoutSeconds,
+            extra: [
+                'name' => $config->getAssetName(),
+                'version' => $config->getAssetVersion(),
+            ],
         );
     }
 
     /**
-     * Encode as base64 JSON for the PAYMENT-REQUIRED header.
+     * Tolerant constructor for requirement objects received from clients or other servers.
+     * Accepts v2 ("amount") and v1 ("maxAmountRequired") field names.
+     *
+     * @param array<array-key, mixed> $data
      */
-    public function toHeaderValue(): string
+    public static function fromArray(array $data): self
     {
-        return base64_encode(Json::encode($this->toArray()));
+        $extra = $data['extra'] ?? [];
+        $asset = $data['asset'] ?? '';
+        if (is_array($asset)) {
+            // Pre-1.2.0 releases of this extension sent the asset as an object.
+            $asset = $asset['address'] ?? '';
+        }
+
+        return new self(
+            scheme: ScalarValue::string($data['scheme'] ?? null),
+            network: ScalarValue::string($data['network'] ?? null),
+            amount: ScalarValue::string($data['amount'] ?? ($data['maxAmountRequired'] ?? null)),
+            asset: ScalarValue::string($asset),
+            payTo: ScalarValue::string($data['payTo'] ?? null),
+            maxTimeoutSeconds: ScalarValue::int($data['maxTimeoutSeconds'] ?? null, PaywallConfiguration::DEFAULT_MAX_TIMEOUT_SECONDS),
+            extra: is_array($extra) ? self::stringKeys($extra) : [],
+        );
     }
 
     /**
-     * @return array<string, mixed>
+     * x402 v2 wire format.
+     *
+     * @return array{scheme: string, network: string, amount: string, asset: string, payTo: string, maxTimeoutSeconds: int, extra?: array<string, mixed>}
      */
     public function toArray(): array
     {
         $data = [
             'scheme' => $this->scheme,
             'network' => $this->network,
-            'maxAmountRequired' => $this->maxAmountRequired,
-            'resource' => $this->resource,
-            'description' => $this->description,
-            'maxTimeoutSeconds' => $this->maxTimeoutSeconds,
-            'payTo' => $this->payTo,
+            'amount' => $this->amount,
             'asset' => $this->asset,
+            'payTo' => $this->payTo,
+            'maxTimeoutSeconds' => $this->maxTimeoutSeconds,
         ];
 
-        if ($this->outputLength !== null) {
-            $data['outputLength'] = $this->outputLength;
+        if ($this->extra !== []) {
+            $data['extra'] = $this->extra;
         }
 
         return $data;
     }
 
     /**
-     * Convert a human-readable price to base units (e.g., "0.01" USDC = "10000").
+     * x402 v1 wire format (only emitted when legacy_v1 is enabled).
+     *
+     * @return array<string, mixed>
      */
-    private static function toBaseUnits(string $amount, int $decimals): string
+    public function toLegacyArray(ResourceInfo $resource, string $legacyNetwork): array
     {
-        $parts = explode('.', $amount, 2);
-        $integer = $parts[0];
-        $fraction = str_pad($parts[1] ?? '', $decimals, '0');
-        $fraction = substr($fraction, 0, $decimals);
-
-        $baseUnits = ltrim($integer . $fraction, '0');
-
-        return $baseUnits !== '' ? $baseUnits : '0';
+        return [
+            'scheme' => $this->scheme,
+            'network' => $legacyNetwork,
+            'maxAmountRequired' => $this->amount,
+            'resource' => $resource->url,
+            'description' => $resource->description,
+            'mimeType' => $resource->mimeType,
+            'payTo' => $this->payTo,
+            'maxTimeoutSeconds' => $this->maxTimeoutSeconds,
+            'asset' => $this->asset,
+            'extra' => $this->extra !== [] ? $this->extra : null,
+        ];
     }
 
     /**
-     * Get the asset descriptor for a currency on a given network.
+     * Whether a client's "accepted" requirement refers to this requirement.
      *
-     * @return array{address: string, symbol: string, decimals: int}
+     * @param array<array-key, mixed> $accepted
      */
-    private static function getAssetForCurrency(string $currency, string $network): array
+    public function matches(array $accepted): bool
     {
-        // USDC contract addresses per network
-        $usdcAddresses = [
-            'base' => '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-            'base-sepolia' => '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
-            'polygon' => '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
-            'ethereum' => '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-        ];
+        $other = self::fromArray($accepted);
 
-        return match (strtoupper($currency)) {
-            'USDC' => [
-                'address' => $usdcAddresses[$network] ?? $usdcAddresses['base-sepolia'],
-                'symbol' => 'USDC',
-                'decimals' => 6,
-            ],
-            default => [
-                'address' => '',
-                'symbol' => $currency,
-                'decimals' => 18,
-            ],
-        };
+        return $other->scheme === $this->scheme
+            && $other->network === $this->network
+            && $other->amount === $this->amount
+            && strcasecmp($other->asset, $this->asset) === 0
+            && strcasecmp($other->payTo, $this->payTo) === 0;
+    }
+
+    /**
+     * Converts a human-readable decimal amount ("0.01") to atomic token units ("10000" for 6 decimals).
+     * Non-numeric input yields "0".
+     */
+    public static function toAtomicUnits(string $amount, int $decimals): string
+    {
+        $amount = str_replace(',', '.', trim($amount));
+        if (preg_match('/^(\d+)(?:\.(\d+))?$/', $amount, $matches) !== 1) {
+            return '0';
+        }
+
+        $fraction = substr(str_pad($matches[2] ?? '', $decimals, '0'), 0, $decimals);
+        $atomic = ltrim($matches[1] . $fraction, '0');
+
+        return $atomic !== '' ? $atomic : '0';
+    }
+
+    /**
+     * Converts atomic token units back to a human-readable decimal string.
+     */
+    public static function fromAtomicUnits(string $atomic, int $decimals): string
+    {
+        if (preg_match('/^\d+$/', $atomic) !== 1) {
+            return '0';
+        }
+
+        $padded = str_pad($atomic, $decimals + 1, '0', STR_PAD_LEFT);
+        $integer = substr($padded, 0, -$decimals);
+        $fraction = rtrim(substr($padded, -$decimals), '0');
+
+        return $fraction === '' ? $integer : $integer . '.' . $fraction;
+    }
+
+    /**
+     * @param array<array-key, mixed> $values
+     * @return array<string, mixed>
+     */
+    private static function stringKeys(array $values): array
+    {
+        $result = [];
+        foreach ($values as $key => $value) {
+            $result[(string)$key] = $value;
+        }
+
+        return $result;
     }
 }

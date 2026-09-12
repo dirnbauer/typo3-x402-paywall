@@ -1,229 +1,258 @@
 /**
- * x402 Paywall — Frontend Payment Handler
+ * x402 paywall - browser wallet client (x402 v2, scheme "exact" on EVM networks, EIP-3009).
  *
- * Handles the client-side payment flow:
- * 1. User clicks "Pay"
- * 2. Connect wallet (EIP-1193 provider / window.ethereum)
- * 3. Sign EIP-712 payment authorization
- * 4. Send signed payload to TYPO3 verify endpoint
- * 5. On success: remove paywall overlay, show content
- *
- * Works with MetaMask, Coinbase Wallet, Rabby, and any EIP-1193 wallet.
+ * Flow:
+ *   1. Read the PaymentRequired document embedded by the 402 page.
+ *   2. Connect an EIP-1193 wallet (MetaMask, Coinbase Wallet, Rabby, ...) and switch to the required chain.
+ *   3. Sign a TransferWithAuthorization (EIP-712) for the token named in the requirement.
+ *   4. Re-request the resource with the base64 PaymentPayload in the PAYMENT-SIGNATURE header.
+ *   5. Replace the page with the paid response.
  */
+(function () {
+    'use strict';
 
-/* global ethereum */
-
-/**
- * Initiate payment for a gated page.
- * @param {number} pageUid - The TYPO3 page UID
- */
-async function x402Pay(pageUid) {
-    const container = document.getElementById('x402-paywall-' + pageUid);
-    if (!container) return;
-
-    const btn = document.getElementById('x402-pay-btn-' + pageUid);
-    const errorEl = document.getElementById('x402-error-' + pageUid);
-    const labels = getLabels(container);
-
-    // Parse payment requirement from data attribute
-    const requirementJson = container.dataset.x402Requirement;
-    const requirementBase64 = container.dataset.x402RequirementBase64;
-    const verifyEndpoint = container.dataset.x402VerifyEndpoint || '/x402/verify';
-
-    if (!requirementJson) {
-        showError(errorEl, labels.missingConfig);
+    const root = document.querySelector('[data-x402-paywall]');
+    if (!root) {
         return;
     }
 
-    let requirement;
-    try {
-        requirement = JSON.parse(requirementJson);
-    } catch {
-        showError(errorEl, labels.invalidConfig);
-        return;
+    const payButton = root.querySelector('[data-x402-pay]');
+    const errorBox = root.querySelector('[data-x402-error]');
+    const labels = {
+        missingConfig: root.dataset.x402LabelMissingConfig || 'Payment configuration is missing.',
+        invalidConfig: root.dataset.x402LabelInvalidConfig || 'Payment configuration is invalid.',
+        noWallet: root.dataset.x402LabelNoWallet || 'No wallet found.',
+        noAccount: root.dataset.x402LabelNoAccount || 'No account selected.',
+        wrongNetwork: root.dataset.x402LabelWrongNetwork || 'Please switch your wallet to the required network.',
+        signatureCancelled: root.dataset.x402LabelSignatureCancelled || 'Signature cancelled.',
+        verificationFailed: root.dataset.x402LabelVerificationFailed || 'Payment was not accepted.',
+        unexpected: root.dataset.x402LabelUnexpected || 'Unexpected error.',
+        processing: root.dataset.x402LabelProcessing || 'Processing...',
+        success: root.dataset.x402LabelSuccess || 'Payment accepted, loading content...',
+    };
+
+    if (payButton) {
+        payButton.addEventListener('click', pay);
     }
 
-    // Set loading state
-    setButtonLoading(btn, true, labels.processing);
-    hideError(errorEl);
+    async function pay() {
+        hideError();
 
-    try {
-        // Step 1: Check for wallet
+        let paymentRequired;
+        try {
+            paymentRequired = JSON.parse(root.dataset.x402PaymentRequired || '');
+        } catch (error) {
+            showError(labels.invalidConfig);
+            return;
+        }
+
+        const requirement = paymentRequired && Array.isArray(paymentRequired.accepts) ? paymentRequired.accepts[0] : null;
+        if (!requirement || !requirement.payTo || !requirement.asset || !requirement.amount) {
+            showError(labels.missingConfig);
+            return;
+        }
+
         if (typeof window.ethereum === 'undefined') {
-            showError(errorEl, labels.noWallet);
-            setButtonLoading(btn, false);
+            showError(labels.noWallet);
             return;
         }
 
-        // Step 2: Request account access
-        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        if (!accounts || accounts.length === 0) {
-            showError(errorEl, labels.noAccount);
-            setButtonLoading(btn, false);
+        setLoading(true);
+
+        try {
+            const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+            const from = Array.isArray(accounts) && accounts.length > 0 ? accounts[0] : null;
+            if (!from) {
+                showError(labels.noAccount);
+                return;
+            }
+
+            const chainId = parseChainId(requirement.network);
+            if (chainId === null || !(await ensureChain(chainId))) {
+                showError(labels.wrongNetwork);
+                return;
+            }
+
+            const authorization = buildAuthorization(from, requirement);
+            const signature = await signAuthorization(from, chainId, requirement, authorization);
+            if (signature === null) {
+                showError(labels.signatureCancelled);
+                return;
+            }
+
+            const paymentPayload = {
+                x402Version: 2,
+                resource: paymentRequired.resource,
+                accepted: requirement,
+                payload: { signature: signature, authorization: authorization },
+            };
+
+            const resourceUrl = (paymentRequired.resource && paymentRequired.resource.url) || root.dataset.x402Resource || window.location.href;
+            const response = await fetch(resourceUrl, {
+                method: 'GET',
+                credentials: 'same-origin',
+                headers: {
+                    'Accept': 'text/html,application/xhtml+xml,*/*;q=0.8',
+                    'PAYMENT-SIGNATURE': base64Utf8(JSON.stringify(paymentPayload)),
+                },
+            });
+
+            if (response.ok) {
+                setStatus(labels.success);
+                const html = await response.text();
+                document.open();
+                document.write(html);
+                document.close();
+                return;
+            }
+
+            showError(await readError(response));
+        } catch (error) {
+            console.error('[x402] payment failed', error);
+            showError(labels.unexpected);
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    function parseChainId(network) {
+        const match = /^eip155:(\d+)$/.exec(network || '');
+        return match ? parseInt(match[1], 10) : null;
+    }
+
+    async function ensureChain(chainId) {
+        const wanted = '0x' + chainId.toString(16);
+        const current = await window.ethereum.request({ method: 'eth_chainId' });
+        if (typeof current === 'string' && current.toLowerCase() === wanted) {
+            return true;
+        }
+        try {
+            await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: wanted }] });
+            return true;
+        } catch (error) {
+            return false;
+        }
+    }
+
+    function buildAuthorization(from, requirement) {
+        const now = Math.floor(Date.now() / 1000);
+        const timeout = Number(requirement.maxTimeoutSeconds) > 0 ? Number(requirement.maxTimeoutSeconds) : 300;
+        const nonce = new Uint8Array(32);
+        window.crypto.getRandomValues(nonce);
+
+        return {
+            from: from,
+            to: requirement.payTo,
+            value: String(requirement.amount),
+            validAfter: String(now - 600),
+            validBefore: String(now + timeout),
+            nonce: '0x' + Array.from(nonce, (byte) => byte.toString(16).padStart(2, '0')).join(''),
+        };
+    }
+
+    async function signAuthorization(from, chainId, requirement, authorization) {
+        const extra = requirement.extra || {};
+        const typedData = {
+            types: {
+                EIP712Domain: [
+                    { name: 'name', type: 'string' },
+                    { name: 'version', type: 'string' },
+                    { name: 'chainId', type: 'uint256' },
+                    { name: 'verifyingContract', type: 'address' },
+                ],
+                TransferWithAuthorization: [
+                    { name: 'from', type: 'address' },
+                    { name: 'to', type: 'address' },
+                    { name: 'value', type: 'uint256' },
+                    { name: 'validAfter', type: 'uint256' },
+                    { name: 'validBefore', type: 'uint256' },
+                    { name: 'nonce', type: 'bytes32' },
+                ],
+            },
+            primaryType: 'TransferWithAuthorization',
+            domain: {
+                name: extra.name || 'USD Coin',
+                version: extra.version || '2',
+                chainId: chainId,
+                verifyingContract: requirement.asset,
+            },
+            message: authorization,
+        };
+
+        try {
+            return await window.ethereum.request({
+                method: 'eth_signTypedData_v4',
+                params: [from, JSON.stringify(typedData)],
+            });
+        } catch (error) {
+            if (error && error.code === 4001) {
+                return null;
+            }
+            throw error;
+        }
+    }
+
+    async function readError(response) {
+        const header = response.headers.get('PAYMENT-REQUIRED');
+        if (header) {
+            try {
+                const document = JSON.parse(atob(header));
+                if (document && document.error) {
+                    return labels.verificationFailed + ' (' + document.error + ')';
+                }
+            } catch (error) {
+                // fall through
+            }
+        }
+        return labels.verificationFailed;
+    }
+
+    function base64Utf8(text) {
+        const bytes = new TextEncoder().encode(text);
+        let binary = '';
+        bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+        return btoa(binary);
+    }
+
+    function showError(message) {
+        if (!errorBox) {
             return;
         }
+        errorBox.textContent = message;
+        errorBox.hidden = false;
+    }
 
-        const payerAddress = accounts[0];
-
-        // Step 3: Sign the payment authorization (EIP-712)
-        const signature = await signPayment(payerAddress, requirement);
-        if (!signature) {
-            showError(errorEl, labels.signatureCancelled);
-            setButtonLoading(btn, false);
+    function hideError() {
+        if (!errorBox) {
             return;
         }
+        errorBox.textContent = '';
+        errorBox.hidden = true;
+    }
 
-        // Step 4: Build payment payload
-        const paymentPayload = btoa(JSON.stringify({
-            signature: signature,
-            from: payerAddress,
-            scheme: requirement.scheme,
-            network: requirement.network,
-            amount: requirement.maxAmountRequired,
-            payTo: requirement.payTo,
-            asset: requirement.asset,
-            resource: requirement.resource,
-        }));
+    function setStatus(message) {
+        if (!errorBox) {
+            return;
+        }
+        errorBox.textContent = message;
+        errorBox.classList.add('x402-paywall__error--info');
+        errorBox.hidden = false;
+    }
 
-        // Step 5: Verify via TYPO3 backend
-        const verifyResponse = await fetch(verifyEndpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                paymentSignature: paymentPayload,
-                paymentRequirement: requirementBase64,
-            }),
-        });
-
-        const verifyResult = await verifyResponse.json();
-
-        if (verifyResult.valid) {
-            // Success — remove paywall
-            container.classList.add('x402-paywall--paid');
-
-            // Reload page content without paywall
-            window.location.reload();
+    function setLoading(loading) {
+        if (!payButton) {
+            return;
+        }
+        payButton.disabled = loading;
+        if (loading) {
+            payButton.dataset.originalText = payButton.textContent.trim();
+            payButton.textContent = '';
+            const spinner = document.createElement('span');
+            spinner.className = 'x402-paywall__spinner';
+            payButton.appendChild(spinner);
+            payButton.appendChild(document.createTextNode(labels.processing));
         } else {
-            showError(errorEl, labels.verificationFailed);
-            setButtonLoading(btn, false);
+            payButton.textContent = payButton.dataset.originalText || '';
         }
-    } catch (err) {
-        console.error('[x402] Payment error:', err);
-        showError(errorEl, labels.unexpected);
-        setButtonLoading(btn, false);
     }
-}
-
-/**
- * Sign an EIP-712 typed data payment authorization.
- * @param {string} from - Payer wallet address
- * @param {object} requirement - x402 payment requirement
- * @returns {Promise<string|null>} - Signature hex string or null if cancelled
- */
-async function signPayment(from, requirement) {
-    const domain = {
-        name: 'x402',
-        version: '2',
-    };
-
-    const types = {
-        EIP712Domain: [
-            { name: 'name', type: 'string' },
-            { name: 'version', type: 'string' },
-        ],
-        PaymentAuthorization: [
-            { name: 'scheme', type: 'string' },
-            { name: 'network', type: 'string' },
-            { name: 'amount', type: 'string' },
-            { name: 'payTo', type: 'address' },
-            { name: 'resource', type: 'string' },
-        ],
-    };
-
-    const message = {
-        scheme: requirement.scheme,
-        network: requirement.network,
-        amount: requirement.maxAmountRequired,
-        payTo: requirement.payTo,
-        resource: requirement.resource,
-    };
-
-    const typedData = JSON.stringify({
-        types: types,
-        domain: domain,
-        primaryType: 'PaymentAuthorization',
-        message: message,
-    });
-
-    try {
-        const signature = await window.ethereum.request({
-            method: 'eth_signTypedData_v4',
-            params: [from, typedData],
-        });
-        return signature;
-    } catch (err) {
-        if (err.code === 4001) {
-            // User rejected the signature
-            return null;
-        }
-        throw err;
-    }
-}
-
-/**
- * Show an error message.
- * @param {HTMLElement|null} el
- * @param {string} message
- */
-function showError(el, message) {
-    if (!el) return;
-    el.textContent = message;
-    el.style.display = 'block';
-}
-
-/**
- * Hide the error message.
- * @param {HTMLElement|null} el
- */
-function hideError(el) {
-    if (!el) return;
-    el.style.display = 'none';
-    el.textContent = '';
-}
-
-/**
- * Read localized labels provided by the Fluid template.
- * @param {HTMLElement} container
- * @returns {Record<string, string>}
- */
-function getLabels(container) {
-    return {
-        invalidConfig: container.dataset.x402LabelInvalidConfig || '',
-        missingConfig: container.dataset.x402LabelMissingConfig || '',
-        noAccount: container.dataset.x402LabelNoAccount || '',
-        noWallet: container.dataset.x402LabelNoWallet || '',
-        processing: container.dataset.x402LabelProcessing || '',
-        signatureCancelled: container.dataset.x402LabelSignatureCancelled || '',
-        unexpected: container.dataset.x402LabelUnexpected || '',
-        verificationFailed: container.dataset.x402LabelVerificationFailed || '',
-    };
-}
-
-/**
- * Set button loading state.
- * @param {HTMLElement|null} btn
- * @param {boolean} loading
- * @param {string} processingLabel
- */
-function setButtonLoading(btn, loading, processingLabel = '') {
-    if (!btn) return;
-    btn.disabled = loading;
-    if (loading) {
-        btn.dataset.originalText = btn.textContent.trim();
-        btn.innerHTML = '<span class="x402-paywall__spinner"></span>' + processingLabel;
-    } else {
-        btn.textContent = btn.dataset.originalText || '';
-    }
-}
-
-window.x402Pay = x402Pay;
+})();

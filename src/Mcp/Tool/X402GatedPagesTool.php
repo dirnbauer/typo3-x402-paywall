@@ -2,42 +2,41 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the TYPO3 extension "x402_paywall" by webconsulting.
+ *
+ * It is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License, either version 2
+ * of the License, or any later version.
+ */
+
 namespace Webconsulting\X402Paywall\Mcp\Tool;
 
 use TYPO3\CMS\Core\Database\ConnectionPool;
 use Webconsulting\X402Paywall\Utility\Json;
+use Webconsulting\X402Paywall\Utility\ScalarValue;
 
 /**
- * MCP Tool: list all TYPO3 pages with x402 paywall enabled.
- *
- * Example agent interaction:
- *   Agent: "Which pages are behind the paywall?"
- *   Tool:  [{ uid: 5, title: "Premium Article", price: "0.05 USDC", slug: "/premium-article" }]
+ * MCP tool "x402_gated_pages": lists TYPO3 pages with the x402 paywall toggle enabled.
  */
 final class X402GatedPagesTool extends AbstractMcpTool
 {
+    public const NAME = 'x402_gated_pages';
+
     public function __construct(
         private readonly ConnectionPool $connectionPool,
     ) {}
 
     public function getName(): string
     {
-        return 'x402_gated_pages';
+        return self::NAME;
     }
 
     public function getDescription(): string
     {
-        return 'List all TYPO3 pages that have the x402 paywall enabled. '
-             . 'Returns page UID, title, slug, price (USDC), and description '
-             . 'for each gated page. Use this to discover which content is monetized.';
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    public function getSchema(): array
-    {
-        return $this->getInputSchema();
+        return 'List all TYPO3 pages that have the x402 paywall enabled through the page properties. '
+            . 'Returns page UID, title, slug, price override (empty = site default price) and the payment '
+            . 'prompt description. Pages gated only through route patterns or gated_page_uids are not listed.';
     }
 
     /**
@@ -56,37 +55,31 @@ final class X402GatedPagesTool extends AbstractMcpTool
      */
     protected function doExecute(array $args): string
     {
-        $qb = $this->connectionPool->getQueryBuilderForTable('pages');
-        $rows = $qb
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable('pages');
+        $rows = $queryBuilder
             ->select('uid', 'title', 'slug', 'tx_x402_paywall_price', 'tx_x402_paywall_description')
             ->from('pages')
-            ->where($qb->expr()->eq('tx_x402_paywall_enabled', 1))
-            ->andWhere($qb->expr()->eq('deleted', 0))
-            ->andWhere($qb->expr()->eq('hidden', 0))
+            ->where(
+                $queryBuilder->expr()->eq('tx_x402_paywall_enabled', 1),
+                $queryBuilder->expr()->eq('deleted', 0),
+                $queryBuilder->expr()->eq('hidden', 0),
+                $queryBuilder->expr()->eq('sys_language_uid', 0),
+            )
             ->orderBy('uid')
             ->executeQuery()
             ->fetchAllAssociative();
 
-        $result = array_map(static fn(array $row) => [
-            'uid' => is_scalar($row['uid'] ?? null) ? (int)$row['uid'] : 0,
-            'title' => is_scalar($row['title'] ?? null) ? (string)$row['title'] : '',
-            'slug' => is_scalar($row['slug'] ?? null) ? (string)$row['slug'] : '',
-            'price' => self::priceLabel($row['tx_x402_paywall_price'] ?? null),
-            'description' => is_scalar($row['tx_x402_paywall_description'] ?? null) ? (string)$row['tx_x402_paywall_description'] : '',
+        $pages = array_map(static fn(array $row): array => [
+            'uid' => ScalarValue::int($row['uid'] ?? null),
+            'title' => ScalarValue::string($row['title'] ?? null),
+            'slug' => ScalarValue::string($row['slug'] ?? null),
+            'price' => ScalarValue::string($row['tx_x402_paywall_price'] ?? null),
+            'description' => ScalarValue::string($row['tx_x402_paywall_description'] ?? null),
         ], $rows);
 
         return Json::encode([
-            'count' => count($result),
-            'pages' => $result,
+            'count' => count($pages),
+            'pages' => $pages,
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-    }
-
-    private static function priceLabel(mixed $price): string
-    {
-        if (!is_scalar($price) || (string)$price === '') {
-            return 'default USDC';
-        }
-
-        return (string)$price . ' USDC';
     }
 }

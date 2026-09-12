@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the TYPO3 extension "x402_paywall" by webconsulting.
+ *
+ * It is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License, either version 2
+ * of the License, or any later version.
+ */
+
 namespace Webconsulting\X402Paywall\Mcp\Tool;
 
 use Webconsulting\X402Paywall\Service\PaymentLogger;
@@ -9,36 +17,25 @@ use Webconsulting\X402Paywall\Utility\Json;
 use Webconsulting\X402Paywall\Utility\ScalarValue;
 
 /**
- * MCP Tool: get x402 payment revenue statistics.
- *
- * Example agent interaction:
- *   Agent: "How much revenue did we earn this week?"
- *   Tool:  { total_revenue: 12.45, total_transactions: 87, period: "last 7 days" }
+ * MCP tool "x402_stats": revenue statistics from the payment log.
  */
 final class X402StatsTool extends AbstractMcpTool
 {
+    public const NAME = 'x402_stats';
+
     public function __construct(
         private readonly PaymentLogger $paymentLogger,
     ) {}
 
     public function getName(): string
     {
-        return 'x402_stats';
+        return self::NAME;
     }
 
     public function getDescription(): string
     {
-        return 'Get x402 payment revenue statistics. '
-             . 'Returns total USDC earned and transaction count for a given period. '
-             . 'Valid periods: today, 7days, 30days, all.';
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    public function getSchema(): array
-    {
-        return $this->getInputSchema();
+        return 'Get x402 payment revenue statistics: settled revenue (in the configured currency, USDC by default), '
+            . 'transaction count and the top five pages for a period. Valid periods: today, 7days, 30days, all.';
     }
 
     /**
@@ -52,7 +49,7 @@ final class X402StatsTool extends AbstractMcpTool
                 'period' => [
                     'type' => 'string',
                     'enum' => ['today', '7days', '30days', 'all'],
-                    'description' => 'Time period for the stats',
+                    'description' => 'Time period for the statistics',
                     'default' => '30days',
                 ],
             ],
@@ -64,7 +61,7 @@ final class X402StatsTool extends AbstractMcpTool
      */
     protected function doExecute(array $args): string
     {
-        $period = is_scalar($args['period'] ?? null) ? (string)$args['period'] : '30days';
+        $period = ScalarValue::string($args['period'] ?? null, '30days');
 
         $since = match ($period) {
             'today' => $this->timestamp('today'),
@@ -78,12 +75,12 @@ final class X402StatsTool extends AbstractMcpTool
 
         return Json::encode([
             'period' => $period,
-            'total_revenue_usdc' => $stats['total_revenue'],
+            'total_revenue' => $stats['total_revenue'],
             'total_transactions' => $stats['total_transactions'],
-            'top_pages' => array_map(static fn(array $p) => [
-                'page_uid' => ScalarValue::int($p['page_uid'] ?? null),
-                'transactions' => ScalarValue::int($p['transactions'] ?? null),
-                'revenue_usdc' => round(ScalarValue::float($p['revenue'] ?? null), 4),
+            'top_pages' => array_map(static fn(array $page): array => [
+                'page_uid' => ScalarValue::int($page['page_uid'] ?? null),
+                'transactions' => ScalarValue::int($page['transactions'] ?? null),
+                'revenue' => round(ScalarValue::float($page['revenue'] ?? null), 6),
             ], $topPages),
         ], JSON_PRETTY_PRINT);
     }

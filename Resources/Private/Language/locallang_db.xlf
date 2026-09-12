@@ -31,11 +31,6 @@
                 <source>x402 payment transaction</source>
             </segment>
         </unit>
-        <unit id="plugin.paywall.title">
-            <segment>
-                <source>x402 paywall overlay</source>
-            </segment>
-        </unit>
         <unit id="tx_x402_payment_log.page_uid">
             <segment>
                 <source>Page</source>

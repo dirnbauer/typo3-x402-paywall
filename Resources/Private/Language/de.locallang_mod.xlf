@@ -267,14 +267,14 @@
         </unit>
         <unit id="simulator.scenario.facilitator_check.label">
             <segment>
-                <source>Facilitator health check</source>
-                <target>Facilitator-Erreichbarkeit</target>
+                <source>Facilitator /supported</source>
+                <target>Facilitator /supported</target>
             </segment>
         </unit>
         <unit id="simulator.scenario.facilitator_check.description">
             <segment>
-                <source>Checks whether the configured x402 facilitator endpoint is reachable.</source>
-                <target>Prüft, ob der konfigurierte x402 Facilitator-Endpunkt erreichbar ist.</target>
+                <source>Calls GET /supported of the x402 facilitator and lists the supported (x402Version, scheme, network) kinds.</source>
+                <target>Ruft GET /supported des x402-Facilitators auf und listet die unterstützten (x402Version, scheme, network) Kombinationen.</target>
             </segment>
         </unit>
     </file>

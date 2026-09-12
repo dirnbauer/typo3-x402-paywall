@@ -5,7 +5,7 @@ CREATE TABLE pages (
 );
 
 #
-# Payment transaction log for revenue analytics (v1.1)
+# Payment transaction log (dashboard, MCP tools)
 #
 CREATE TABLE tx_x402_payment_log (
     uid int(11) NOT NULL auto_increment,

@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the TYPO3 extension "x402_paywall" by webconsulting.
+ *
+ * It is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License, either version 2
+ * of the License, or any later version.
+ */
+
 namespace Webconsulting\X402Paywall\Service;
 
 use Psr\Http\Message\ServerRequestInterface;
@@ -72,14 +80,17 @@ final class RouteGateResolver
     }
 
     /**
-     * Get a description for the content behind the paywall.
+     * Description of the content behind the paywall (ResourceInfo.description): the page's payment prompt
+     * text, then the page title, then the request path.
      */
     public function getContentDescription(ServerRequestInterface $request): string
     {
         $pageRecord = $this->requestAttributeResolver->getPageRecord($request);
-        $title = ScalarValue::string($pageRecord['title'] ?? null);
-        if ($title !== '') {
-            return $title;
+        foreach (['tx_x402_paywall_description', 'title'] as $field) {
+            $value = ScalarValue::string($pageRecord[$field] ?? null);
+            if ($value !== '') {
+                return $value;
+            }
         }
 
         return $request->getUri()->getPath();

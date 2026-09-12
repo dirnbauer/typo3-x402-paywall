@@ -2,15 +2,26 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the TYPO3 extension "x402_paywall" by webconsulting.
+ *
+ * It is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License, either version 2
+ * of the License, or any later version.
+ */
+
 namespace Webconsulting\X402Paywall\Controller;
 
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
-use TYPO3\CMS\Core\Http\RequestFactory;
 use TYPO3\CMS\Core\Http\JsonResponse;
+use TYPO3\CMS\Core\Http\RequestFactory;
 use TYPO3\CMS\Core\Localization\LanguageService;
 use TYPO3\CMS\Core\Site\SiteFinder;
+use Webconsulting\X402Paywall\Domain\Model\PaymentRequired;
+use Webconsulting\X402Paywall\Http\PaymentRequiredResponseFactory;
+use Webconsulting\X402Paywall\Middleware\X402PaywallMiddleware;
 use Webconsulting\X402Paywall\Service\PaymentLogger;
 use Webconsulting\X402Paywall\Utility\HttpUrl;
 use Webconsulting\X402Paywall\Utility\Json;
@@ -106,7 +117,7 @@ final readonly class PaywallDashboardController
             [
                 'id' => 'facilitator_check',
                 'label' => $this->translate('simulator.scenario.facilitator_check.label'),
-                'url' => 'https://x402.org/facilitator',
+                'url' => 'https://x402.org/facilitator/supported',
                 'signature' => '',
                 'description' => $this->translate('simulator.scenario.facilitator_check.description'),
             ],
@@ -144,12 +155,30 @@ final readonly class PaywallDashboardController
         ];
 
         if ($signatureMode === 'mock') {
-            $mockPayload = base64_encode(Json::encode([
-                'from' => '0x0000000000000000000000000000000000000001',
-                'signature' => '0x' . str_repeat('ab', 65),
-                'network' => 'eip155:84532',
+            // Syntactically valid x402 v2 PaymentPayload (exact/EVM, EIP-3009) with a dummy signature:
+            // the facilitator must reject it, which proves the verification path is wired.
+            $headers[X402PaywallMiddleware::HEADER_PAYMENT_SIGNATURE] = base64_encode(Json::encode([
+                'x402Version' => PaymentRequired::X402_VERSION,
+                'accepted' => [
+                    'scheme' => 'exact',
+                    'network' => 'eip155:84532',
+                    'amount' => '10000',
+                    'asset' => '0x036CbD53842c5426634e7929541eC2318f3dCF7e',
+                    'payTo' => '0x0000000000000000000000000000000000000002',
+                    'maxTimeoutSeconds' => 300,
+                ],
+                'payload' => [
+                    'signature' => '0x' . str_repeat('ab', 65),
+                    'authorization' => [
+                        'from' => '0x0000000000000000000000000000000000000001',
+                        'to' => '0x0000000000000000000000000000000000000002',
+                        'value' => '10000',
+                        'validAfter' => (string)(time() - 60),
+                        'validBefore' => (string)(time() + 300),
+                        'nonce' => '0x' . str_repeat('00', 32),
+                    ],
+                ],
             ]));
-            $headers['PAYMENT-SIGNATURE'] = $mockPayload;
         }
 
         $steps = [];
@@ -177,25 +206,22 @@ final readonly class PaywallDashboardController
             }
             $responseBody = (string)$response->getBody();
 
-            $steps[] = ['type' => 'receive', 'message' => "← {$statusCode} (" . $elapsed . 'ms)', 'ms' => $elapsed];
+            $steps[] = ['type' => 'receive', 'message' => "<- {$statusCode} (" . $elapsed . 'ms)', 'ms' => $elapsed];
 
             $decodedRequirement = null;
-            $paymentHeader = $response->getHeaderLine('PAYMENT-REQUIRED');
-            if ($paymentHeader === '') {
-                $paymentHeader = $response->getHeaderLine('X-PAYMENT-REQUIRED');
-            }
-
+            $paymentHeader = $response->getHeaderLine(PaymentRequiredResponseFactory::HEADER_PAYMENT_REQUIRED);
             if ($paymentHeader !== '') {
-                $decoded = base64_decode($paymentHeader, true);
-                if ($decoded !== false) {
-                    $decodedRequirement = Json::decodeObject($decoded);
-                    $steps[] = ['type' => 'info', 'message' => '📋 Payment requirement decoded', 'ms' => $elapsed];
+                try {
+                    $decodedRequirement = PaymentRequired::fromHeaderValue($paymentHeader)->toArray();
+                    $steps[] = ['type' => 'info', 'message' => 'PAYMENT-REQUIRED decoded (x402 v2)', 'ms' => $elapsed];
+                } catch (\InvalidArgumentException $exception) {
+                    $steps[] = ['type' => 'error', 'message' => 'PAYMENT-REQUIRED header invalid: ' . $exception->getMessage(), 'ms' => $elapsed];
                 }
             }
 
             if ($signatureMode === 'mock' && $statusCode === 402) {
-                $steps[] = ['type' => 'facilitator', 'message' => '→ Sent to facilitator for verification', 'ms' => $elapsed + 5];
-                $steps[] = ['type' => 'reject', 'message' => '✗ Facilitator rejected mock signature', 'ms' => $elapsed + 80];
+                $steps[] = ['type' => 'facilitator', 'message' => '-> PAYMENT-SIGNATURE forwarded to the facilitator (/verify)', 'ms' => $elapsed + 5];
+                $steps[] = ['type' => 'reject', 'message' => 'x Facilitator rejected the mock signature (expected)', 'ms' => $elapsed + 80];
             }
 
             return new JsonResponse([
@@ -210,7 +236,7 @@ final readonly class PaywallDashboardController
             ]);
         } catch (\Throwable $e) {
             $elapsed = (int)((microtime(true) - $startTime) * 1000);
-            $steps[] = ['type' => 'error', 'message' => '✗ ' . $e->getMessage(), 'ms' => $elapsed];
+            $steps[] = ['type' => 'error', 'message' => 'x ' . $e->getMessage(), 'ms' => $elapsed];
 
             return new JsonResponse([
                 'status' => 0,

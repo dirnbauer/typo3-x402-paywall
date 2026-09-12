@@ -1,4 +1,4 @@
-/* x402 Paywall — Frontend Styles */
+/* x402 paywall - styles of the 402 Payment Required page */
 /* Theming via CSS custom properties for easy brand adaptation */
 
 :root {
@@ -33,27 +33,25 @@
     }
 }
 
+body.x402-page {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--x402-bg);
+    color: var(--x402-text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
 .x402-paywall {
-    position: relative;
-}
-
-.x402-paywall__overlay {
-    position: relative;
-    z-index: 10;
-}
-
-.x402-paywall__gradient {
-    position: absolute;
-    top: -160px;
-    left: 0;
-    right: 0;
-    height: 160px;
-    background: linear-gradient(to bottom, transparent, var(--x402-bg));
-    pointer-events: none;
-    z-index: 5;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+    box-sizing: border-box;
 }
 
 .x402-paywall__card {
+    width: 100%;
     border: 1px solid var(--x402-border);
     border-radius: var(--x402-radius);
     padding: 32px 24px;
@@ -156,13 +154,25 @@
     text-decoration: underline;
 }
 
-/* Success state — hides the paywall */
-.x402-paywall--paid .x402-paywall__overlay {
-    display: none;
+.x402-paywall__error--info {
+    background: var(--x402-accent-bg);
+    border-color: var(--x402-accent);
+    color: var(--x402-accent);
 }
 
-.x402-paywall--paid .x402-paywall__gradient {
-    display: none;
+.x402-paywall__caip2 {
+    opacity: 0.7;
+}
+
+.x402-paywall__resource {
+    font-size: 11px;
+    color: var(--x402-muted);
+    margin: 16px 0 0;
+    word-break: break-all;
+}
+
+.x402-paywall__resource code {
+    font-size: 11px;
 }
 
 /* Loading spinner */

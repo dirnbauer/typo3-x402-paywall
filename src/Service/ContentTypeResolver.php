@@ -2,6 +2,14 @@
 
 declare(strict_types=1);
 
+/*
+ * This file is part of the TYPO3 extension "x402_paywall" by webconsulting.
+ *
+ * It is free software; you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License, either version 2
+ * of the License, or any later version.
+ */
+
 namespace Webconsulting\X402Paywall\Service;
 
 use Psr\Http\Message\ServerRequestInterface;
@@ -36,14 +44,14 @@ final class ContentTypeResolver
      * @var array<string, array{uidParam: string, type: string}>
      */
     private const PLUGIN_MAP = [
-        'tx_news_pi1'           => ['uidParam' => 'news',     'type' => 'news'],
-        'tx_news'               => ['uidParam' => 'news',     'type' => 'news'],
-        'tx_blog_pi1'           => ['uidParam' => 'post',     'type' => 'blog_post'],
-        'tx_blog'               => ['uidParam' => 'post',     'type' => 'blog_post'],
+        'tx_news_pi1'           => ['uidParam' => 'news', 'type' => 'news'],
+        'tx_news'               => ['uidParam' => 'news', 'type' => 'news'],
+        'tx_blog_pi1'           => ['uidParam' => 'post', 'type' => 'blog_post'],
+        'tx_blog'               => ['uidParam' => 'post', 'type' => 'blog_post'],
         'tx_cal_controller'     => ['uidParam' => 'event_id', 'type' => 'event'],
-        'tx_seminars'           => ['uidParam' => 'showUid',  'type' => 'seminar'],
-        'tx_events2_pi1'        => ['uidParam' => 'event',    'type' => 'event'],
-        'tx_falkevents_pi1'     => ['uidParam' => 'event',    'type' => 'event'],
+        'tx_seminars'           => ['uidParam' => 'showUid', 'type' => 'seminar'],
+        'tx_events2_pi1'        => ['uidParam' => 'event', 'type' => 'event'],
+        'tx_falkevents_pi1'     => ['uidParam' => 'event', 'type' => 'event'],
     ];
 
     /**
