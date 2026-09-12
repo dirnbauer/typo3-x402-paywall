@@ -5,24 +5,61 @@ on:
     branches:
       - main
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   qa:
-    name: PHP ${{ matrix.php }}
+    name: Lint, CGL, PHPStan (PHP 8.4)
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
 
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+          tools: composer:v2
+          extensions: intl, mbstring, pdo_sqlite, sqlite3, xml, zip
+
+      - name: Validate composer.json
+        run: composer validate --strict
+
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Audit dependencies
+        run: composer audit --no-interaction
+
+      - name: Lint
+        run: Build/Scripts/runTests.sh -s lint
+
+      - name: Coding guidelines (php-cs-fixer, TYPO3 ruleset, dry run)
+        run: Build/Scripts/runTests.sh -s cgl
+
+      - name: PHPStan
+        run: Build/Scripts/runTests.sh -s phpstan
+
+  unit:
+    name: Unit tests (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    continue-on-error: ${{ matrix.experimental }}
     strategy:
       fail-fast: false
       matrix:
-        php:
-          - '8.2'
-          - '8.3'
-          - '8.4'
-          - '8.5'
-
+        include:
+          - php: '8.4'
+            experimental: false
+          - php: '8.5'
+            experimental: true
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -33,16 +70,54 @@ jobs:
           php-version: ${{ matrix.php }}
           coverage: none
           tools: composer:v2
-          extensions: curl, intl, mbstring, openssl, pdo_sqlite, sqlite3, xml, zip
+          extensions: intl, mbstring, pdo_sqlite, sqlite3, xml, zip
 
-      - name: Validate Composer metadata
-        run: composer validate --strict
+      - name: Install dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist ${{ matrix.experimental && '--ignore-platform-req=php+' || '' }}
+
+      - name: Unit tests
+        run: Build/Scripts/runTests.sh -s unit
+
+  functional:
+    name: Functional tests (PHP 8.4, ${{ matrix.database }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [sqlite, mariadb]
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    env:
+      typo3DatabaseDriver: mysqli
+      typo3DatabaseHost: 127.0.0.1
+      typo3DatabasePort: 3306
+      typo3DatabaseUsername: root
+      typo3DatabasePassword: root
+      typo3DatabaseName: func_test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+          tools: composer:v2
+          extensions: intl, mbstring, mysqli, pdo_sqlite, sqlite3, xml, zip
 
       - name: Install dependencies
         run: composer install --no-interaction --no-progress --prefer-dist
 
-      - name: Audit dependencies
-        run: composer audit --no-interaction
-
-      - name: Run TYPO3 14 quality gates
-        run: Build/Scripts/runTests.sh -s ci
+      - name: Functional tests
+        run: Build/Scripts/runTests.sh -s functional -d ${{ matrix.database }}
