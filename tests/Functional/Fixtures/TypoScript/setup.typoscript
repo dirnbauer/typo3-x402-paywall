@@ -1,0 +1,4 @@
+page = PAGE
+page.10 = TEXT
+page.10.value = Hello from TYPO3
+page.config.disableAllHeaderCode = 1

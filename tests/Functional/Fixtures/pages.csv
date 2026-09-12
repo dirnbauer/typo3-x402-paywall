@@ -1,0 +1,5 @@
+"pages",,,,,,,,
+,"uid","pid","title","slug","doktype","tx_x402_paywall_enabled","tx_x402_paywall_price","tx_x402_paywall_description"
+,1,0,"Root","/",1,0,"",""
+,2,1,"Premium","/premium",1,1,"0.05","Premium article"
+,3,1,"Free","/free",1,0,"",""

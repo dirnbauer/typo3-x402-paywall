@@ -1,12 +1,17 @@
+# PHPStan configuration. Policy floor for this extension is level 8; the code base passes "max".
 parameters:
     level: max
     paths:
         - src
-        - tests/Unit
-    tmpDir: var/phpstan
+        - tests
+        - Configuration
+    excludePaths:
+        - tests/Functional/Fixtures
+    tmpDir: .Build/phpstan
     reportUnmatchedIgnoredErrors: true
     typo3:
         requestGetAttributeMapping:
             frontend.page.information: TYPO3\CMS\Frontend\Page\PageInformation|null
             routing: TYPO3\CMS\Core\Routing\PageArguments|null
             site: TYPO3\CMS\Core\Site\Entity\Site|null
+            language: TYPO3\CMS\Core\Site\Entity\SiteLanguage|null
