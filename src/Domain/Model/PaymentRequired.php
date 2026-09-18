@@ -16,85 +16,60 @@ use Webconsulting\X402Paywall\Utility\Json;
 use Webconsulting\X402Paywall\Utility\ScalarValue;
 
 /**
- * x402 v2 "PaymentRequired" document: the base64-encoded value of the PAYMENT-REQUIRED response header.
+ * x402 v2 "PaymentRequired": the document a 402 response carries base64-encoded in PAYMENT-REQUIRED.
  */
 final readonly class PaymentRequired
 {
     public const X402_VERSION = 2;
-    public const LEGACY_X402_VERSION = 1;
 
     /**
-     * @param list<PaymentRequirement> $accepts
+     * @param list<PaymentRequirement> $accepts Payment options the client may choose from
+     * @param array<string, mixed> $extensions Protocol extension data (pass-through)
      */
     public function __construct(
         public ResourceInfo $resource,
         public array $accepts,
         public ?string $error = null,
+        public array $extensions = [],
     ) {}
 
     /**
-     * Decodes a PAYMENT-REQUIRED header value.
-     *
      * @throws \InvalidArgumentException when the value is not a base64-encoded PaymentRequired document
      */
     public static function fromHeaderValue(string $base64): self
     {
-        $decoded = base64_decode(trim($base64), true);
-        if ($decoded === false) {
-            throw new \InvalidArgumentException('PAYMENT-REQUIRED is not valid base64', 1757600001);
-        }
-
-        try {
-            $data = Json::decodeObject($decoded);
-        } catch (\JsonException $exception) {
-            throw new \InvalidArgumentException('PAYMENT-REQUIRED is not valid JSON', 1757600002, $exception);
-        }
-
-        return self::fromArray($data);
+        return self::fromArray(HeaderDocument::decode($base64, 'PaymentRequired'));
     }
 
     /**
-     * @param array<array-key, mixed> $data
+     * @param array<string, mixed> $data
+     * @throws \InvalidArgumentException when the document offers no payment requirement
      */
     public static function fromArray(array $data): self
     {
-        $rawAccepts = $data['accepts'] ?? null;
         $accepts = [];
-        $firstRawAccept = [];
-        if (is_array($rawAccepts)) {
-            foreach ($rawAccepts as $entry) {
-                if (!is_array($entry)) {
-                    continue;
-                }
-                if ($accepts === []) {
-                    $firstRawAccept = $entry;
-                }
-                $accepts[] = PaymentRequirement::fromArray($entry);
+        foreach (is_array($data['accepts'] ?? null) ? $data['accepts'] : [] as $entry) {
+            if (is_array($entry)) {
+                $accepts[] = PaymentRequirement::fromArray(Json::object($entry));
             }
         }
-
         if ($accepts === []) {
             throw new \InvalidArgumentException('PaymentRequired contains no payment requirements', 1757600003);
         }
 
-        $rawResource = $data['resource'] ?? null;
-        $resource = is_array($rawResource)
-            ? ResourceInfo::fromArray($rawResource)
-            // x402 v1 carried resource and description inside each requirement
-            : new ResourceInfo(
-                url: ScalarValue::string($firstRawAccept['resource'] ?? null),
-                description: ScalarValue::string($firstRawAccept['description'] ?? null),
-                mimeType: ScalarValue::string($firstRawAccept['mimeType'] ?? null),
-            );
+        $error = ScalarValue::string($data['error'] ?? null);
 
-        $error = $data['error'] ?? null;
-
-        return new self($resource, $accepts, is_string($error) && $error !== '' ? $error : null);
+        return new self(
+            resource: ResourceInfo::fromArray(Json::object($data['resource'] ?? null)),
+            accepts: $accepts,
+            error: $error !== '' ? $error : null,
+            extensions: Json::object($data['extensions'] ?? null),
+        );
     }
 
     public function withError(string $error): self
     {
-        return new self($this->resource, $this->accepts, $error);
+        return new self($this->resource, $this->accepts, $error, $this->extensions);
     }
 
     public function first(): PaymentRequirement
@@ -103,7 +78,7 @@ final readonly class PaymentRequired
     }
 
     /**
-     * @return array{x402Version: int, error?: string, resource: array<string, string>, accepts: list<array<string, mixed>>}
+     * @return array{x402Version: int, error?: string, resource: array<string, string>, accepts: list<array<string, mixed>>, extensions?: array<string, mixed>}
      */
     public function toArray(): array
     {
@@ -113,25 +88,11 @@ final readonly class PaymentRequired
         }
         $data['resource'] = $this->resource->toArray();
         $data['accepts'] = array_map(static fn(PaymentRequirement $requirement): array => $requirement->toArray(), $this->accepts);
+        if ($this->extensions !== []) {
+            $data['extensions'] = $this->extensions;
+        }
 
         return $data;
-    }
-
-    /**
-     * x402 v1 "PaymentRequirementsResponse" (the 402 body v1 clients parse).
-     *
-     * @return array{x402Version: int, error: string, accepts: list<array<string, mixed>>}
-     */
-    public function toLegacyArray(string $legacyNetwork): array
-    {
-        return [
-            'x402Version' => self::LEGACY_X402_VERSION,
-            'error' => $this->error ?? 'Payment required',
-            'accepts' => array_map(
-                fn(PaymentRequirement $requirement): array => $requirement->toLegacyArray($this->resource, $legacyNetwork),
-                $this->accepts,
-            ),
-        ];
     }
 
     public function toHeaderValue(): string

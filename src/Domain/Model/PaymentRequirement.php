@@ -13,17 +13,18 @@ declare(strict_types=1);
 namespace Webconsulting\X402Paywall\Domain\Model;
 
 use Webconsulting\X402Paywall\Configuration\PaywallConfiguration;
+use Webconsulting\X402Paywall\Utility\Json;
 use Webconsulting\X402Paywall\Utility\ScalarValue;
 
 /**
- * One x402 v2 "PaymentRequirements" object (an entry of PaymentRequired.accepts).
- *
- * Field set per x402 specification v2.0 (2025-12-09): scheme, network (CAIP-2), amount (atomic units),
- * asset (token contract address), payTo, maxTimeoutSeconds and scheme-specific extra data. The EIP-712
- * domain name/version of the token is carried in extra for the "exact" EVM scheme.
+ * One x402 v2 "PaymentRequirements" object (an entry of PaymentRequired.accepts): scheme, CAIP-2 network,
+ * amount in atomic token units, token contract address, receiving wallet, timeout and scheme-specific
+ * extra data (the EIP-712 domain name/version of the token for the "exact" EVM scheme).
  */
 final readonly class PaymentRequirement
 {
+    public const SCHEME_EXACT = 'exact';
+
     /**
      * @param array<string, mixed> $extra
      */
@@ -43,7 +44,7 @@ final readonly class PaymentRequirement
     public static function fromConfig(PaywallConfiguration $config, string $price): self
     {
         return new self(
-            scheme: PaywallConfiguration::SCHEME_EXACT,
+            scheme: self::SCHEME_EXACT,
             network: $config->getCaip2NetworkId(),
             amount: self::toAtomicUnits($price, $config->assetDecimals),
             asset: $config->getAssetAddress(),
@@ -58,33 +59,23 @@ final readonly class PaymentRequirement
 
     /**
      * Tolerant constructor for requirement objects received from clients or other servers.
-     * Accepts v2 ("amount") and v1 ("maxAmountRequired") field names.
      *
-     * @param array<array-key, mixed> $data
+     * @param array<string, mixed> $data
      */
     public static function fromArray(array $data): self
     {
-        $extra = $data['extra'] ?? [];
-        $asset = $data['asset'] ?? '';
-        if (is_array($asset)) {
-            // Pre-1.2.0 releases of this extension sent the asset as an object.
-            $asset = $asset['address'] ?? '';
-        }
-
         return new self(
             scheme: ScalarValue::string($data['scheme'] ?? null),
             network: ScalarValue::string($data['network'] ?? null),
-            amount: ScalarValue::string($data['amount'] ?? ($data['maxAmountRequired'] ?? null)),
-            asset: ScalarValue::string($asset),
+            amount: ScalarValue::string($data['amount'] ?? null),
+            asset: ScalarValue::string($data['asset'] ?? null),
             payTo: ScalarValue::string($data['payTo'] ?? null),
             maxTimeoutSeconds: ScalarValue::int($data['maxTimeoutSeconds'] ?? null, PaywallConfiguration::DEFAULT_MAX_TIMEOUT_SECONDS),
-            extra: is_array($extra) ? self::stringKeys($extra) : [],
+            extra: Json::object($data['extra'] ?? null),
         );
     }
 
     /**
-     * x402 v2 wire format.
-     *
      * @return array{scheme: string, network: string, amount: string, asset: string, payTo: string, maxTimeoutSeconds: int, extra?: array<string, mixed>}
      */
     public function toArray(): array
@@ -97,7 +88,6 @@ final readonly class PaymentRequirement
             'payTo' => $this->payTo,
             'maxTimeoutSeconds' => $this->maxTimeoutSeconds,
         ];
-
         if ($this->extra !== []) {
             $data['extra'] = $this->extra;
         }
@@ -106,30 +96,9 @@ final readonly class PaymentRequirement
     }
 
     /**
-     * x402 v1 wire format (only emitted when legacy_v1 is enabled).
+     * Whether a client's "accepted" requirement refers to this requirement (addresses compare case-insensitively).
      *
-     * @return array<string, mixed>
-     */
-    public function toLegacyArray(ResourceInfo $resource, string $legacyNetwork): array
-    {
-        return [
-            'scheme' => $this->scheme,
-            'network' => $legacyNetwork,
-            'maxAmountRequired' => $this->amount,
-            'resource' => $resource->url,
-            'description' => $resource->description,
-            'mimeType' => $resource->mimeType,
-            'payTo' => $this->payTo,
-            'maxTimeoutSeconds' => $this->maxTimeoutSeconds,
-            'asset' => $this->asset,
-            'extra' => $this->extra !== [] ? $this->extra : null,
-        ];
-    }
-
-    /**
-     * Whether a client's "accepted" requirement refers to this requirement.
-     *
-     * @param array<array-key, mixed> $accepted
+     * @param array<string, mixed> $accepted
      */
     public function matches(array $accepted): bool
     {
@@ -173,19 +142,5 @@ final readonly class PaymentRequirement
         $fraction = rtrim(substr($padded, -$decimals), '0');
 
         return $fraction === '' ? $integer : $integer . '.' . $fraction;
-    }
-
-    /**
-     * @param array<array-key, mixed> $values
-     * @return array<string, mixed>
-     */
-    private static function stringKeys(array $values): array
-    {
-        $result = [];
-        foreach ($values as $key => $value) {
-            $result[(string)$key] = $value;
-        }
-
-        return $result;
     }
 }

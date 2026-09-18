@@ -64,41 +64,19 @@ final class PaymentRequiredTest extends UnitTestCase
     }
 
     #[Test]
-    public function toLegacyArrayProducesTheV1Body(): void
+    public function extensionsArePassedThrough(): void
     {
         $document = new PaymentRequired(
-            new ResourceInfo('https://example.test/premium', 'Premium'),
-            [new PaymentRequirement('exact', 'eip155:84532', '10000', '0xToken', '0xReceiver')],
+            new ResourceInfo('https://example.test/premium'),
+            [new PaymentRequirement('exact', 'eip155:8453', '10000', '0xToken', '0xReceiver')],
+            extensions: ['bazaar' => ['info' => ['input' => ['type' => 'http']]]],
         );
 
-        $legacy = $document->toLegacyArray('base-sepolia');
+        $decoded = PaymentRequired::fromHeaderValue($document->toHeaderValue());
 
-        self::assertSame(1, $legacy['x402Version']);
-        self::assertSame('Payment required', $legacy['error']);
-        self::assertSame('base-sepolia', $legacy['accepts'][0]['network']);
-        self::assertSame('https://example.test/premium', $legacy['accepts'][0]['resource']);
-    }
-
-    #[Test]
-    public function fromArrayAcceptsV1DocumentsWithoutResourceInfo(): void
-    {
-        $document = PaymentRequired::fromArray([
-            'x402Version' => 1,
-            'error' => 'Payment required',
-            'accepts' => [[
-                'scheme' => 'exact',
-                'network' => 'base-sepolia',
-                'maxAmountRequired' => '10000',
-                'resource' => 'https://example.test/premium',
-                'description' => 'Premium',
-                'payTo' => '0xReceiver',
-                'asset' => '0xToken',
-            ]],
-        ]);
-
-        self::assertSame('https://example.test/premium', $document->resource->url);
-        self::assertSame('Premium', $document->resource->description);
-        self::assertSame('10000', $document->first()->amount);
+        self::assertSame(['x402Version', 'resource', 'accepts', 'extensions'], array_keys($document->toArray()));
+        self::assertSame($document->extensions, $decoded->extensions);
+        self::assertSame($document->extensions, $decoded->withError('x')->extensions);
     }
 
     #[Test]

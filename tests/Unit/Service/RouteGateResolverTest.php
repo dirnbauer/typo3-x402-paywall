@@ -19,7 +19,6 @@ use TYPO3\CMS\Core\Routing\PageArguments;
 use TYPO3\CMS\Frontend\Page\PageInformation;
 use TYPO3\TestingFramework\Core\Unit\UnitTestCase;
 use Webconsulting\X402Paywall\Configuration\PaywallConfiguration;
-use Webconsulting\X402Paywall\Service\RequestAttributeResolver;
 use Webconsulting\X402Paywall\Service\RouteGateResolver;
 
 final class RouteGateResolverTest extends UnitTestCase
@@ -29,7 +28,7 @@ final class RouteGateResolverTest extends UnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->resolver = new RouteGateResolver(new RequestAttributeResolver());
+        $this->resolver = new RouteGateResolver();
     }
 
     #[Test]
@@ -98,6 +97,14 @@ final class RouteGateResolverTest extends UnitTestCase
         self::assertSame('Premium', $this->resolver->getContentDescription($withoutOverride));
 
         self::assertSame('/api/v1/content/42', $this->resolver->getContentDescription($this->request('/api/v1/content/42')));
+    }
+
+    #[Test]
+    public function pageUidComesFromThePageInformationThenTheRoutingResult(): void
+    {
+        self::assertSame(9, $this->resolver->getPageUid($this->request('/', routing: new PageArguments(3, '0', []), pageRecord: ['uid' => 9])));
+        self::assertSame(3, $this->resolver->getPageUid($this->request('/', routing: new PageArguments(3, '0', []))));
+        self::assertSame(0, $this->resolver->getPageUid($this->request('/')));
     }
 
     /**

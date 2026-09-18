@@ -21,18 +21,17 @@ use TYPO3\CMS\Core\View\ViewFactoryInterface;
 use Webconsulting\X402Paywall\Configuration\PaywallConfiguration;
 use Webconsulting\X402Paywall\Domain\Model\PaymentRequired;
 use Webconsulting\X402Paywall\Domain\Model\PaymentRequirement;
+use Webconsulting\X402Paywall\Legacy\X402V1;
 use Webconsulting\X402Paywall\Utility\Json;
 
 /**
- * Builds "402 Payment Required" responses following the x402 v2 HTTP transport:
- * the PaymentRequired document travels base64-encoded in the PAYMENT-REQUIRED header,
- * the body is implementation-specific. Browsers (Accept: text/html) receive a wallet paywall
- * page, every other client a JSON copy of the PaymentRequired document.
+ * Builds "402 Payment Required" responses: the PaymentRequired document travels base64-encoded in the
+ * PAYMENT-REQUIRED header; the body is implementation-specific per the HTTP transport specification.
+ * Browsers (Accept: text/html) receive the wallet paywall page, every other client a JSON copy of the
+ * document (the v1 "PaymentRequirementsResponse" shape when legacy_v1 is enabled).
  */
 final class PaymentRequiredResponseFactory
 {
-    public const HEADER_PAYMENT_REQUIRED = 'PAYMENT-REQUIRED';
-
     private const TEMPLATE_ROOT = 'EXT:x402_paywall/Resources/Private/Templates/Paywall';
 
     public function __construct(
@@ -43,9 +42,7 @@ final class PaymentRequiredResponseFactory
 
     public function isBrowserRequest(ServerRequestInterface $request): bool
     {
-        $accept = strtolower($request->getHeaderLine('Accept'));
-
-        return str_contains($accept, 'text/html');
+        return str_contains(strtolower($request->getHeaderLine('Accept')), 'text/html');
     }
 
     public function create(
@@ -59,7 +56,7 @@ final class PaymentRequiredResponseFactory
         }
 
         $response = $this->responseFactory->createResponse(402, 'Payment Required')
-            ->withHeader(self::HEADER_PAYMENT_REQUIRED, $paymentRequired->toHeaderValue())
+            ->withHeader(X402Header::PAYMENT_REQUIRED, $paymentRequired->toHeaderValue())
             ->withHeader('Cache-Control', 'no-store');
 
         if ($this->isBrowserRequest($request)) {
@@ -69,7 +66,7 @@ final class PaymentRequiredResponseFactory
         }
 
         $body = $config->legacyV1
-            ? $paymentRequired->toLegacyArray($config->getLegacyNetworkId())
+            ? X402V1::paymentRequiredToArray($paymentRequired, $config->getLegacyNetworkId())
             : $paymentRequired->toArray();
 
         return $response
@@ -84,17 +81,14 @@ final class PaymentRequiredResponseFactory
             templateRootPaths: [self::TEMPLATE_ROOT],
             request: $request,
         ));
-
         $view->assignMultiple([
             'paymentRequired' => Json::encode($paymentRequired->toArray(), JSON_UNESCAPED_SLASHES),
-            'paymentRequiredBase64' => $paymentRequired->toHeaderValue(),
             'price' => PaymentRequirement::fromAtomicUnits($requirement->amount, $config->assetDecimals),
             'currency' => $config->currency,
             'description' => $paymentRequired->resource->description,
             'resourceUrl' => $paymentRequired->resource->url,
             'network' => $requirement->network,
             'networkLabel' => $config->getNetworkLabel(),
-            'chainId' => $config->getChainId(),
             'error' => $paymentRequired->error,
         ]);
 

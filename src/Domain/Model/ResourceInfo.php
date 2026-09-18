@@ -26,7 +26,7 @@ final readonly class ResourceInfo
     ) {}
 
     /**
-     * @param array<array-key, mixed> $data
+     * @param array<string, mixed> $data
      */
     public static function fromArray(array $data): self
     {

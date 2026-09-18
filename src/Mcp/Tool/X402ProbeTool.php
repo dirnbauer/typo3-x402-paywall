@@ -15,19 +15,21 @@ namespace Webconsulting\X402Paywall\Mcp\Tool;
 use TYPO3\CMS\Core\Http\RequestFactory;
 use Webconsulting\X402Paywall\Domain\Model\PaymentRequired;
 use Webconsulting\X402Paywall\Domain\Model\PaymentRequirement;
-use Webconsulting\X402Paywall\Http\PaymentRequiredResponseFactory;
+use Webconsulting\X402Paywall\Http\X402Header;
+use Webconsulting\X402Paywall\Legacy\X402V1;
 use Webconsulting\X402Paywall\Utility\HttpUrl;
 use Webconsulting\X402Paywall\Utility\Json;
 use Webconsulting\X402Paywall\Utility\ScalarValue;
 
 /**
- * MCP tool "x402_probe": performs a GET against a public URL and reports whether it answers
- * 402 Payment Required. A v2 PAYMENT-REQUIRED header is decoded; when it is missing, a v1 style
- * JSON body ({"x402Version": 1, "accepts": [...]}) is still recognised and flagged as legacy.
+ * MCP tool "x402_probe": GETs a public URL and reports whether it answers 402 Payment Required.
+ * The v2 PAYMENT-REQUIRED header is decoded; without it, an x402 v1 JSON body is recognised and flagged legacy.
  */
 final class X402ProbeTool extends AbstractMcpTool
 {
     public const NAME = 'x402_probe';
+
+    private const TIMEOUT = 10;
 
     public function __construct(
         private readonly RequestFactory $requestFactory,
@@ -78,8 +80,8 @@ final class X402ProbeTool extends AbstractMcpTool
 
         try {
             $response = $this->requestFactory->request($url, 'GET', [
-                'headers' => ['Accept' => 'application/json', 'User-Agent' => 'x402-mcp-tool/1.2'],
-                'timeout' => 10,
+                'headers' => ['Accept' => 'application/json', 'User-Agent' => 'x402-mcp-tool (TYPO3)'],
+                'timeout' => self::TIMEOUT,
                 'allow_redirects' => false,
                 'http_errors' => false,
             ]);
@@ -90,67 +92,58 @@ final class X402ProbeTool extends AbstractMcpTool
         $status = $response->getStatusCode();
         $result = ['url' => $url, 'status' => $status];
 
-        if ($status === 402) {
-            $result['paywall'] = true;
-            $header = $response->getHeaderLine(PaymentRequiredResponseFactory::HEADER_PAYMENT_REQUIRED);
-            $body = $this->decodeBody((string)$response->getBody());
-
-            $paymentRequired = null;
-            $legacy = false;
-            if ($header !== '') {
-                try {
-                    $paymentRequired = PaymentRequired::fromHeaderValue($header);
-                } catch (\InvalidArgumentException $exception) {
-                    $result['warning'] = 'PAYMENT-REQUIRED header could not be decoded: ' . $exception->getMessage();
-                }
-            } elseif (ScalarValue::int($body['x402Version'] ?? null) === PaymentRequired::LEGACY_X402_VERSION) {
-                try {
-                    $paymentRequired = PaymentRequired::fromArray($body);
-                    $legacy = true;
-                } catch (\InvalidArgumentException $exception) {
-                    $result['warning'] = 'x402 v1 body could not be decoded: ' . $exception->getMessage();
-                }
-            } else {
-                $result['warning'] = 'No PAYMENT-REQUIRED header and no x402 v1 body found';
-            }
-
-            if ($paymentRequired !== null) {
-                $requirement = $paymentRequired->first();
-                $result['x402Version'] = $legacy ? PaymentRequired::LEGACY_X402_VERSION : PaymentRequired::X402_VERSION;
-                $result['legacy'] = $legacy;
-                $result['paymentRequired'] = $legacy ? $body : $paymentRequired->toArray();
-                $result['summary'] = sprintf(
-                    'Payment required: %s atomic units (%s if 6 decimals) of asset %s on %s, pay to %s',
-                    $requirement->amount,
-                    PaymentRequirement::fromAtomicUnits($requirement->amount, 6),
-                    $requirement->asset,
-                    $requirement->network,
-                    $requirement->payTo,
-                );
-            }
-        } elseif ($status >= 200 && $status < 300) {
+        if ($status >= 200 && $status < 300) {
             $result['paywall'] = false;
             $result['summary'] = 'URL is accessible without payment (status ' . $status . ')';
-        } else {
+        } elseif ($status !== 402) {
             $result['summary'] = 'Unexpected HTTP status: ' . $status;
+        } else {
+            $result['paywall'] = true;
+            $result = [...$result, ...$this->describe402($response->getHeaderLine(X402Header::PAYMENT_REQUIRED), (string)$response->getBody())];
         }
 
         return Json::encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     }
 
     /**
-     * @return array<array-key, mixed>
+     * @return array<string, mixed>
      */
-    private function decodeBody(string $body): array
+    private function describe402(string $header, string $rawBody): array
     {
-        if ($body === '') {
-            return [];
+        try {
+            $body = $rawBody === '' ? [] : Json::decodeObject($rawBody);
+        } catch (\JsonException) {
+            $body = [];
         }
 
         try {
-            return Json::decodeObject($body);
-        } catch (\JsonException) {
-            return [];
+            if ($header !== '') {
+                $document = PaymentRequired::fromHeaderValue($header);
+                $legacy = false;
+            } elseif (ScalarValue::int($body['x402Version'] ?? null) === X402V1::VERSION) {
+                $document = X402V1::paymentRequiredFromArray($body);
+                $legacy = true;
+            } else {
+                return ['warning' => 'No PAYMENT-REQUIRED header and no x402 v1 body found'];
+            }
+        } catch (\InvalidArgumentException $exception) {
+            return ['warning' => 'Payment requirements could not be decoded: ' . $exception->getMessage()];
         }
+
+        $requirement = $document->first();
+
+        return [
+            'x402Version' => $legacy ? X402V1::VERSION : PaymentRequired::X402_VERSION,
+            'legacy' => $legacy,
+            'paymentRequired' => $legacy ? $body : $document->toArray(),
+            'summary' => sprintf(
+                'Payment required: %s atomic units (%s if 6 decimals) of asset %s on %s, pay to %s',
+                $requirement->amount,
+                PaymentRequirement::fromAtomicUnits($requirement->amount, 6),
+                $requirement->asset,
+                $requirement->network,
+                $requirement->payTo,
+            ),
+        ];
     }
 }

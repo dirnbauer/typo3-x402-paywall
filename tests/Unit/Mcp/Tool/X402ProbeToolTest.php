@@ -23,6 +23,7 @@ use Webconsulting\X402Paywall\Domain\Model\PaymentRequirement;
 use Webconsulting\X402Paywall\Domain\Model\ResourceInfo;
 use Webconsulting\X402Paywall\Mcp\Tool\X402ProbeTool;
 use Webconsulting\X402Paywall\Tests\Unit\JsonTestTrait;
+use Webconsulting\X402Paywall\Utility\Json;
 
 final class X402ProbeToolTest extends UnitTestCase
 {
@@ -45,7 +46,7 @@ final class X402ProbeToolTest extends UnitTestCase
         );
         $response = (new JsonResponse($document->toArray(), 402))->withHeader('PAYMENT-REQUIRED', $document->toHeaderValue());
 
-        $result = self::decodeJsonObject($this->tool($response)->execute(['url' => self::URL]));
+        $result = Json::decodeObject($this->tool($response)->execute(['url' => self::URL]));
 
         self::assertSame(402, $result['status']);
         self::assertTrue($result['paywall']);
@@ -65,7 +66,7 @@ final class X402ProbeToolTest extends UnitTestCase
             'accepts' => [['scheme' => 'exact', 'network' => 'base-sepolia', 'maxAmountRequired' => '10000', 'resource' => self::URL, 'payTo' => '0xReceiver', 'asset' => '0xToken']],
         ];
 
-        $result = self::decodeJsonObject($this->tool(new JsonResponse($body, 402))->execute(['url' => self::URL]));
+        $result = Json::decodeObject($this->tool(new JsonResponse($body, 402))->execute(['url' => self::URL]));
 
         self::assertTrue($result['paywall']);
         self::assertTrue($result['legacy']);
@@ -76,11 +77,11 @@ final class X402ProbeToolTest extends UnitTestCase
     #[Test]
     public function reportsFreeResourcesAndRejectsPrivateTargets(): void
     {
-        $free = self::decodeJsonObject($this->tool(new Response())->execute(['url' => self::URL]));
+        $free = Json::decodeObject($this->tool(new Response())->execute(['url' => self::URL]));
         self::assertFalse($free['paywall']);
         self::assertSame(200, $free['status']);
 
-        $private = self::decodeJsonObject($this->tool(new Response())->execute(['url' => 'http://127.0.0.1/']));
+        $private = Json::decodeObject($this->tool(new Response())->execute(['url' => 'http://127.0.0.1/']));
         self::assertSame('URL is not allowed for server-side probes', $private['error']);
     }
 

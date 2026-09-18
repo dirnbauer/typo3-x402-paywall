@@ -88,13 +88,13 @@ final class PaywallConfigurationTest extends UnitTestCase
         self::assertSame('0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', $base->getAssetAddress());
         self::assertSame('USD Coin', $base->getAssetName());
         self::assertSame('2', $base->getAssetVersion());
-        self::assertSame(8453, $base->getChainId());
 
         $sepolia = PaywallConfiguration::fromArray(['network' => 'base-sepolia']);
         self::assertSame('eip155:84532', $sepolia->getCaip2NetworkId());
         self::assertSame('0x036CbD53842c5426634e7929541eC2318f3dCF7e', $sepolia->getAssetAddress());
         self::assertSame('USDC', $sepolia->getAssetName());
         self::assertSame('base-sepolia', $sepolia->getLegacyNetworkId());
+        self::assertSame('Base Sepolia (testnet)', $sepolia->getNetworkLabel());
 
         $polygon = PaywallConfiguration::fromArray(['network' => 'polygon']);
         self::assertSame('eip155:137', $polygon->getCaip2NetworkId());
@@ -111,7 +111,6 @@ final class PaywallConfigurationTest extends UnitTestCase
 
         $unknown = PaywallConfiguration::fromArray(['network' => 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp']);
         self::assertSame('solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp', $unknown->getCaip2NetworkId());
-        self::assertSame(0, $unknown->getChainId());
         self::assertSame('', $unknown->getAssetAddress());
     }
 }

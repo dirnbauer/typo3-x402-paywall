@@ -4,44 +4,19 @@ services:
     autoconfigure: true
     public: false
 
+  # MCP tools are discovered by hn/typo3-mcp-server through the "mcp.tool" tag
+  # (x402_probe, x402_decode_header, x402_gated_pages, x402_stats, x402_transactions).
+  _instanceof:
+    Webconsulting\X402Paywall\Mcp\Tool\AbstractMcpTool:
+      public: true
+      tags:
+        - name: mcp.tool
+
   Webconsulting\X402Paywall\:
     resource: '../src/*'
 
   Webconsulting\X402Paywall\Middleware\X402PaywallMiddleware:
     public: true
 
-  Webconsulting\X402Paywall\Configuration\ConfigurationProvider:
-    public: true
-
   Webconsulting\X402Paywall\Controller\PaywallDashboardController:
     public: true
-
-  Webconsulting\X402Paywall\Service\PaymentVerifier:
-    public: true
-
-  # MCP tools, discovered by hn/typo3-mcp-server through the "mcp.tool" tag.
-  # Exposed tool names: x402_probe, x402_decode_header, x402_gated_pages, x402_stats, x402_transactions.
-  Webconsulting\X402Paywall\Mcp\Tool\X402ProbeTool:
-    public: true
-    tags:
-      - name: mcp.tool
-
-  Webconsulting\X402Paywall\Mcp\Tool\X402DecodeHeaderTool:
-    public: true
-    tags:
-      - name: mcp.tool
-
-  Webconsulting\X402Paywall\Mcp\Tool\X402GatedPagesTool:
-    public: true
-    tags:
-      - name: mcp.tool
-
-  Webconsulting\X402Paywall\Mcp\Tool\X402StatsTool:
-    public: true
-    tags:
-      - name: mcp.tool
-
-  Webconsulting\X402Paywall\Mcp\Tool\X402TransactionsTool:
-    public: true
-    tags:
-      - name: mcp.tool

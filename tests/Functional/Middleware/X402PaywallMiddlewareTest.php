@@ -78,6 +78,19 @@ final class X402PaywallMiddlewareTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function routePatternsGatePagesWithoutTheToggle(): void
+    {
+        $response = $this->executeFrontendSubRequest(
+            (new InternalRequest('https://acme.test/premium-by-route'))->withHeader('Accept', 'application/json'),
+        );
+
+        self::assertSame(402, $response->getStatusCode());
+        $document = PaymentRequired::fromHeaderValue($response->getHeaderLine('PAYMENT-REQUIRED'));
+        self::assertSame('10000', $document->first()->amount);
+        self::assertSame('By route', $document->resource->description);
+    }
+
+    #[Test]
     public function ungatedPagesRenderNormally(): void
     {
         $response = $this->executeFrontendSubRequest(new InternalRequest('https://acme.test/free'));
@@ -108,6 +121,7 @@ final class X402PaywallMiddlewareTest extends FunctionalTestCase
                 'network' => 'base-sepolia',
                 'facilitator_url' => 'https://x402.org/facilitator',
                 'default_price' => '0.01',
+                'gated_route_patterns' => ['/premium-by-route'],
             ],
         ];
 

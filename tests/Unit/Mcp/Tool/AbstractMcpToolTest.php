@@ -16,6 +16,7 @@ use PHPUnit\Framework\Attributes\Test;
 use TYPO3\TestingFramework\Core\Unit\UnitTestCase;
 use Webconsulting\X402Paywall\Mcp\Tool\AbstractMcpTool;
 use Webconsulting\X402Paywall\Tests\Unit\JsonTestTrait;
+use Webconsulting\X402Paywall\Utility\Json;
 
 final class AbstractMcpToolTest extends UnitTestCase
 {
@@ -36,7 +37,7 @@ final class AbstractMcpToolTest extends UnitTestCase
             throw new \RuntimeException('failed');
         });
 
-        self::assertSame(['error' => 'failed'], self::decodeJsonObject($tool->execute([])));
+        self::assertSame(['error' => 'failed'], Json::decodeObject($tool->execute([])));
     }
 
     #[Test]

@@ -196,9 +196,9 @@
         const header = response.headers.get('PAYMENT-REQUIRED');
         if (header) {
             try {
-                const document = JSON.parse(atob(header));
-                if (document && document.error) {
-                    return labels.verificationFailed + ' (' + document.error + ')';
+                const decoded = JSON.parse(atob(header));
+                if (decoded && decoded.error) {
+                    return labels.verificationFailed + ' (' + decoded.error + ')';
                 }
             } catch (error) {
                 // fall through

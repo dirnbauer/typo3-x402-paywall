@@ -19,6 +19,7 @@ use Webconsulting\X402Paywall\Domain\Model\PaymentRequirement;
 use Webconsulting\X402Paywall\Domain\Model\ResourceInfo;
 use Webconsulting\X402Paywall\Mcp\Tool\X402DecodeHeaderTool;
 use Webconsulting\X402Paywall\Tests\Unit\JsonTestTrait;
+use Webconsulting\X402Paywall\Utility\Json;
 
 final class X402DecodeHeaderToolTest extends UnitTestCase
 {
@@ -38,7 +39,7 @@ final class X402DecodeHeaderToolTest extends UnitTestCase
             [new PaymentRequirement('exact', 'eip155:84532', '10000', '0xToken', '0xReceiver', 300, ['name' => 'USDC', 'version' => '2'])],
         );
 
-        $result = self::decodeJsonObject((new X402DecodeHeaderTool())->execute(['header' => $document->toHeaderValue()]));
+        $result = Json::decodeObject((new X402DecodeHeaderTool())->execute(['header' => $document->toHeaderValue()]));
 
         self::assertSame($document->toArray(), $result['decoded']);
         self::assertSame('PaymentRequired', self::jsonPath($result, 'human', 'kind'));
@@ -61,8 +62,8 @@ final class X402DecodeHeaderToolTest extends UnitTestCase
         $settlement = base64_encode(json_encode(['success' => true, 'transaction' => '0xtx', 'network' => 'eip155:8453', 'payer' => '0xPayer'], JSON_THROW_ON_ERROR));
 
         $tool = new X402DecodeHeaderTool();
-        $payloadResult = self::decodeJsonObject($tool->execute(['header' => $payload]));
-        $settlementResult = self::decodeJsonObject($tool->execute(['header' => $settlement]));
+        $payloadResult = Json::decodeObject($tool->execute(['header' => $payload]));
+        $settlementResult = Json::decodeObject($tool->execute(['header' => $settlement]));
 
         self::assertSame('PaymentPayload', self::jsonPath($payloadResult, 'human', 'kind'));
         self::assertSame('0xPayer', self::jsonPath($payloadResult, 'human', 'payer'));

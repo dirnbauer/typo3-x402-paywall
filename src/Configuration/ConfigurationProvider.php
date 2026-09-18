@@ -14,56 +14,25 @@ namespace Webconsulting\X402Paywall\Configuration;
 
 use Psr\Http\Message\ServerRequestInterface;
 use TYPO3\CMS\Core\Site\Entity\Site;
-use TYPO3\CMS\Core\Site\SiteFinder;
+use Webconsulting\X402Paywall\Utility\Json;
 
 /**
- * Provides PaywallConfiguration from TYPO3 site settings.
+ * Reads the "x402_paywall" block of a site configuration into a PaywallConfiguration.
  */
 final class ConfigurationProvider
 {
-    public function __construct(
-        private readonly SiteFinder $siteFinder,
-    ) {}
-
     /**
-     * Get configuration from the current request's site.
+     * Configuration of the site the request was routed to; disabled defaults without a site.
      */
     public function getFromRequest(ServerRequestInterface $request): PaywallConfiguration
     {
         $site = $request->getAttribute('site');
-        if (!$site instanceof Site) {
-            return new PaywallConfiguration();
-        }
 
-        return PaywallConfiguration::fromArray($this->getSettings($site));
+        return $site instanceof Site ? $this->getForSite($site) : new PaywallConfiguration();
     }
 
-    /**
-     * Get configuration for a specific site identifier.
-     */
-    public function getForSite(string $siteIdentifier): PaywallConfiguration
+    public function getForSite(Site $site): PaywallConfiguration
     {
-        try {
-            $site = $this->siteFinder->getSiteByIdentifier($siteIdentifier);
-            return PaywallConfiguration::fromArray($this->getSettings($site));
-        } catch (\Exception) {
-            return new PaywallConfiguration();
-        }
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function getSettings(Site $site): array
-    {
-        $configuration = $site->getConfiguration();
-        $settings = $configuration['x402_paywall'] ?? [];
-
-        if (!is_array($settings)) {
-            return [];
-        }
-
-        /** @var array<string, mixed> $settings */
-        return $settings;
+        return PaywallConfiguration::fromArray(Json::object($site->getConfiguration()['x402_paywall'] ?? null));
     }
 }

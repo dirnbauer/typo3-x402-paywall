@@ -12,15 +12,19 @@ declare(strict_types=1);
 
 namespace Webconsulting\X402Paywall\Mcp\Tool;
 
+use Webconsulting\X402Paywall\Domain\Model\PaymentPayload;
+use Webconsulting\X402Paywall\Domain\Model\PaymentRequired;
 use Webconsulting\X402Paywall\Domain\Model\PaymentRequirement;
+use Webconsulting\X402Paywall\Domain\Model\SettlementResponse;
+use Webconsulting\X402Paywall\Legacy\X402V1;
 use Webconsulting\X402Paywall\Utility\Json;
 use Webconsulting\X402Paywall\Utility\ScalarValue;
 
 /**
- * MCP tool "x402_decode_header": decodes any base64 x402 header value and explains it.
+ * MCP tool "x402_decode_header": decodes a base64 x402 header value and explains it.
  *
- * Recognised documents: PaymentRequired (PAYMENT-REQUIRED), PaymentPayload (PAYMENT-SIGNATURE / X-PAYMENT),
- * SettlementResponse (PAYMENT-RESPONSE / X-PAYMENT-RESPONSE) and a bare PaymentRequirements object.
+ * Recognised documents: PaymentRequired (PAYMENT-REQUIRED, v2 header or v1 body), PaymentPayload
+ * (PAYMENT-SIGNATURE / X-PAYMENT), SettlementResponse (PAYMENT-RESPONSE) and a bare PaymentRequirements object.
  */
 final class X402DecodeHeaderTool extends AbstractMcpTool
 {
@@ -87,94 +91,81 @@ final class X402DecodeHeaderTool extends AbstractMcpTool
 
         return Json::encode([
             'decoded' => $document,
-            'human' => $this->describe($document, $decimals),
+            'human' => self::describe($document, $decimals),
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
     }
 
     /**
-     * @param array<array-key, mixed> $document
+     * @param array<string, mixed> $document
      * @return array<string, mixed>
      */
-    private function describe(array $document, int $decimals): array
+    private static function describe(array $document, int $decimals): array
     {
         $version = ScalarValue::int($document['x402Version'] ?? null);
 
-        if (isset($document['accepts']) && is_array($document['accepts'])) {
-            $first = is_array($document['accepts'][0] ?? null) ? $document['accepts'][0] : [];
-            $resource = is_array($document['resource'] ?? null) ? $document['resource'] : [];
+        if (isset($document['accepts'])) {
+            $required = $version === X402V1::VERSION
+                ? X402V1::paymentRequiredFromArray($document)
+                : PaymentRequired::fromArray($document);
 
             return [
                 'kind' => 'PaymentRequired',
                 'x402Version' => $version,
-                'resource' => ScalarValue::string($resource['url'] ?? ($first['resource'] ?? null)),
-                'description' => ScalarValue::string($resource['description'] ?? ($first['description'] ?? null)),
-                'error' => ScalarValue::string($document['error'] ?? null),
-                'options' => count($document['accepts']),
-                ...$this->describeRequirement($first, $decimals),
+                'resource' => $required->resource->url,
+                'description' => $required->resource->description,
+                'error' => $required->error ?? '',
+                'options' => count($required->accepts),
+                ...self::describeRequirement($required->first(), $decimals),
             ];
         }
 
-        if (isset($document['accepted']) && is_array($document['accepted'])) {
-            $payload = is_array($document['payload'] ?? null) ? $document['payload'] : [];
-            $authorization = is_array($payload['authorization'] ?? null) ? $payload['authorization'] : [];
+        if (isset($document['payload'])) {
+            $payload = PaymentPayload::fromArray($document);
+            $authorization = Json::object($payload->payload['authorization'] ?? null);
 
             return [
                 'kind' => 'PaymentPayload',
                 'x402Version' => $version,
-                'payer' => ScalarValue::string($authorization['from'] ?? null),
+                'payer' => $payload->getPayer(),
                 'valid_before' => ScalarValue::string($authorization['validBefore'] ?? null),
-                ...$this->describeRequirement($document['accepted'], $decimals),
+                ...self::describeRequirement(PaymentRequirement::fromArray($payload->accepted), $decimals),
             ];
         }
 
         if (array_key_exists('success', $document) || array_key_exists('transaction', $document)) {
+            $settlement = SettlementResponse::fromArray($document);
+
             return [
                 'kind' => 'SettlementResponse',
-                'success' => ($document['success'] ?? null) === true,
-                'transaction' => ScalarValue::string($document['transaction'] ?? null),
-                'network' => ScalarValue::string($document['network'] ?? null),
-                'payer' => ScalarValue::string($document['payer'] ?? null),
-                'error' => ScalarValue::string($document['errorReason'] ?? null),
-            ];
-        }
-
-        if (isset($document['payload']) && is_array($document['payload'])) {
-            $authorization = is_array($document['payload']['authorization'] ?? null) ? $document['payload']['authorization'] : [];
-
-            return [
-                'kind' => 'PaymentPayload (x402 v1)',
-                'x402Version' => $version,
-                'scheme' => ScalarValue::string($document['scheme'] ?? null),
-                'network' => ScalarValue::string($document['network'] ?? null),
-                'payer' => ScalarValue::string($authorization['from'] ?? null),
-                'amount' => ScalarValue::string($authorization['value'] ?? null),
+                'success' => $settlement->success,
+                'transaction' => $settlement->transaction,
+                'network' => $settlement->network,
+                'payer' => $settlement->payer,
+                'error' => $settlement->errorReason,
             ];
         }
 
         if (isset($document['payTo'])) {
-            return ['kind' => 'PaymentRequirements', ...$this->describeRequirement($document, $decimals)];
+            return ['kind' => 'PaymentRequirements', ...self::describeRequirement(PaymentRequirement::fromArray($document), $decimals)];
         }
 
         return ['kind' => 'unknown'];
     }
 
     /**
-     * @param array<array-key, mixed> $requirement
      * @return array<string, mixed>
      */
-    private function describeRequirement(array $requirement, int $decimals): array
+    private static function describeRequirement(PaymentRequirement $requirement, int $decimals): array
     {
-        $parsed = PaymentRequirement::fromArray($requirement);
-
         return [
-            'scheme' => $parsed->scheme,
-            'network' => $parsed->network,
-            'amount' => $parsed->amount,
-            'price' => PaymentRequirement::fromAtomicUnits($parsed->amount, $decimals),
-            'asset' => $parsed->asset,
-            'asset_name' => ScalarValue::string($parsed->extra['name'] ?? null),
-            'pay_to' => $parsed->payTo,
-            'timeout_seconds' => $parsed->maxTimeoutSeconds,
+            'scheme' => $requirement->scheme,
+            'network' => $requirement->network,
+            'amount' => $requirement->amount,
+            'price' => PaymentRequirement::fromAtomicUnits($requirement->amount, $decimals),
+            'asset' => $requirement->asset,
+            'asset_name' => ScalarValue::string($requirement->extra['name'] ?? null),
+            'pay_to' => $requirement->payTo,
+            'timeout_seconds' => $requirement->maxTimeoutSeconds,
         ];
     }
 }

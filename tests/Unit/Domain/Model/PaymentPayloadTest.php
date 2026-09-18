@@ -54,7 +54,6 @@ final class PaymentPayloadTest extends UnitTestCase
         $payload = PaymentPayload::fromHeaderValue(base64_encode(json_encode(self::v2Payload(), JSON_THROW_ON_ERROR)));
 
         self::assertSame(2, $payload->x402Version);
-        self::assertFalse($payload->isLegacy());
         self::assertSame('exact', $payload->getScheme());
         self::assertSame('eip155:84532', $payload->getNetwork());
         self::assertSame('0xPayer', $payload->getPayer());
@@ -73,7 +72,8 @@ final class PaymentPayloadTest extends UnitTestCase
 
         $payload = PaymentPayload::fromHeaderValue(base64_encode(json_encode($data, JSON_THROW_ON_ERROR)));
 
-        self::assertTrue($payload->isLegacy());
+        self::assertSame(1, $payload->x402Version);
+        self::assertSame(['scheme' => 'exact', 'network' => 'base-sepolia'], $payload->accepted);
         self::assertSame('exact', $payload->getScheme());
         self::assertSame('base-sepolia', $payload->getNetwork());
         self::assertSame($data, $payload->toArray());
@@ -102,6 +102,24 @@ final class PaymentPayloadTest extends UnitTestCase
         $this->expectException(\InvalidArgumentException::class);
 
         PaymentPayload::fromHeaderValue(base64_encode('{"x402Version":2,"accepted":{"scheme":"exact"}}'));
+    }
+
+    #[Test]
+    public function keepsUnknownFieldsForTheFacilitator(): void
+    {
+        $data = self::v2Payload();
+        $data['extensions'] = ['bazaar' => true];
+        $data['payload']['assetTransferMethod'] = 'eip3009';
+
+        self::assertSame($data, PaymentPayload::fromArray($data)->toArray());
+    }
+
+    #[Test]
+    public function rejectsV1PayloadsWithoutSchemeAndNetwork(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        PaymentPayload::fromArray(['x402Version' => 1, 'payload' => ['signature' => '0x']]);
     }
 
     #[Test]

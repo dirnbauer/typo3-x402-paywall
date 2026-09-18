@@ -17,7 +17,6 @@ use PHPUnit\Framework\Attributes\Test;
 use TYPO3\TestingFramework\Core\Unit\UnitTestCase;
 use Webconsulting\X402Paywall\Configuration\PaywallConfiguration;
 use Webconsulting\X402Paywall\Domain\Model\PaymentRequirement;
-use Webconsulting\X402Paywall\Domain\Model\ResourceInfo;
 
 final class PaymentRequirementTest extends UnitTestCase
 {
@@ -75,22 +74,6 @@ final class PaymentRequirementTest extends UnitTestCase
     }
 
     #[Test]
-    public function toLegacyArrayProducesX402V1Fields(): void
-    {
-        $config = PaywallConfiguration::fromArray(['enabled' => true, 'wallet_address' => '0xReceiver', 'network' => 'base-sepolia']);
-        $requirement = PaymentRequirement::fromConfig($config, '0.01');
-        $legacy = $requirement->toLegacyArray(new ResourceInfo('https://example.test/premium', 'Premium', 'text/html'), 'base-sepolia');
-
-        self::assertSame('base-sepolia', $legacy['network']);
-        self::assertSame('10000', $legacy['maxAmountRequired']);
-        self::assertSame('https://example.test/premium', $legacy['resource']);
-        self::assertSame('Premium', $legacy['description']);
-        self::assertSame('text/html', $legacy['mimeType']);
-        self::assertSame('0x036CbD53842c5426634e7929541eC2318f3dCF7e', $legacy['asset']);
-        self::assertArrayNotHasKey('amount', $legacy);
-    }
-
-    #[Test]
     public function matchesComparesTheProtocolRelevantFieldsCaseInsensitively(): void
     {
         $config = PaywallConfiguration::fromArray(['enabled' => true, 'wallet_address' => '0xAbCd', 'network' => 'base-sepolia']);
@@ -106,18 +89,20 @@ final class PaymentRequirementTest extends UnitTestCase
     }
 
     #[Test]
-    public function fromArrayUnderstandsV1FieldNamesAndObjectAssets(): void
+    public function fromArrayIgnoresUnknownFieldsAndDefaultsTheTimeout(): void
     {
         $requirement = PaymentRequirement::fromArray([
             'scheme' => 'exact',
-            'network' => 'base-sepolia',
-            'maxAmountRequired' => '10000',
-            'asset' => ['address' => '0xToken', 'symbol' => 'USDC', 'decimals' => 6],
+            'network' => 'eip155:84532',
+            'amount' => '10000',
+            'asset' => '0xToken',
             'payTo' => '0xReceiver',
+            'outputSchema' => ['type' => 'object'],
+            'extra' => ['name' => 'USDC'],
         ]);
 
-        self::assertSame('10000', $requirement->amount);
-        self::assertSame('0xToken', $requirement->asset);
         self::assertSame(300, $requirement->maxTimeoutSeconds);
+        self::assertSame(['name' => 'USDC'], $requirement->extra);
+        self::assertArrayNotHasKey('outputSchema', $requirement->toArray());
     }
 }

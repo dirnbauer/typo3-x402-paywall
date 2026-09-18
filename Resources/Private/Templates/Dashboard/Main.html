@@ -8,40 +8,19 @@
 
 <div class="x402-dashboard">
 
-    <!-- Summary Cards -->
     <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card card-body">
-                <h6 class="text-muted"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.period.today" /></h6>
-                <h3 class="mb-0">{statsToday.total_revenue} USDC</h3>
-                <small class="text-muted">{statsToday.total_transactions} <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.transactions" /></small>
+        <f:for each="{periods}" as="period">
+            <div class="col-md-3">
+                <div class="card card-body">
+                    <h6 class="text-muted"><f:translate key="{period.label}" /></h6>
+                    <h3 class="mb-0">{period.stats.total_revenue} USDC</h3>
+                    <small class="text-muted">{period.stats.total_transactions} <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.transactions" /></small>
+                </div>
             </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card card-body">
-                <h6 class="text-muted"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.period.last_7_days" /></h6>
-                <h3 class="mb-0">{stats7d.total_revenue} USDC</h3>
-                <small class="text-muted">{stats7d.total_transactions} <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.transactions" /></small>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card card-body">
-                <h6 class="text-muted"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.period.last_30_days" /></h6>
-                <h3 class="mb-0">{stats30d.total_revenue} USDC</h3>
-                <small class="text-muted">{stats30d.total_transactions} <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.transactions" /></small>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card card-body">
-                <h6 class="text-muted"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.period.all_time" /></h6>
-                <h3 class="mb-0">{statsAll.total_revenue} USDC</h3>
-                <small class="text-muted">{statsAll.total_transactions} <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.transactions" /></small>
-            </div>
-        </div>
+        </f:for>
     </div>
 
     <div class="row">
-        <!-- Top Pages -->
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
@@ -81,7 +60,6 @@
             </div>
         </div>
 
-        <!-- Recent Transactions -->
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
@@ -129,7 +107,6 @@
         </div>
     </div>
 
-    <!-- Configuration Info -->
     <div class="row mt-4">
         <div class="col-12">
             <div class="card">

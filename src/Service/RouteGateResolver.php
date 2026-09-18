@@ -13,21 +13,19 @@ declare(strict_types=1);
 namespace Webconsulting\X402Paywall\Service;
 
 use Psr\Http\Message\ServerRequestInterface;
+use TYPO3\CMS\Core\Routing\PageArguments;
+use TYPO3\CMS\Frontend\Page\PageInformation;
 use Webconsulting\X402Paywall\Configuration\PaywallConfiguration;
 use Webconsulting\X402Paywall\Utility\ScalarValue;
 
 /**
- * Determines whether a given request should be gated behind x402 payment.
+ * Decides whether a frontend request is gated and reads price, description and page UID from it.
+ *
+ * Gating sources, in order: free_routes (always win), gated_route_patterns, gated_page_uids and the
+ * page toggle tx_x402_paywall_enabled. Route patterns are exact paths, "/prefix/*" or fnmatch() globs.
  */
 final class RouteGateResolver
 {
-    public function __construct(
-        private readonly RequestAttributeResolver $requestAttributeResolver,
-    ) {}
-
-    /**
-     * Check if the current request requires payment.
-     */
     public function isGated(ServerRequestInterface $request, PaywallConfiguration $config): bool
     {
         if (!$config->isValid()) {
@@ -35,57 +33,37 @@ final class RouteGateResolver
         }
 
         $path = $request->getUri()->getPath();
-
-        // Check free routes first (whitelist takes priority)
-        foreach ($config->freeRoutes as $freeRoute) {
-            if ($this->matchesPattern($path, $freeRoute)) {
+        foreach ($config->freeRoutes as $pattern) {
+            if (self::matchesPattern($path, $pattern)) {
                 return false;
             }
         }
-
-        // Check gated route patterns (for headless/API mode)
         foreach ($config->gatedRoutePatterns as $pattern) {
-            if ($this->matchesPattern($path, $pattern)) {
+            if (self::matchesPattern($path, $pattern)) {
                 return true;
             }
         }
 
-        // Check page UID (for traditional TYPO3 frontend)
-        $pageId = $this->requestAttributeResolver->getPageUid($request);
-        if ($pageId > 0 && in_array($pageId, $config->gatedPageUids, true)) {
-            return true;
-        }
-
-        $pageRecord = $this->requestAttributeResolver->getPageRecord($request);
-        if (ScalarValue::bool($pageRecord['tx_x402_paywall_enabled'] ?? null)) {
-            return true;
-        }
-
-        return false;
+        return in_array($this->getPageUid($request), $config->gatedPageUids, true)
+            || ScalarValue::bool($this->pageRecord($request)['tx_x402_paywall_enabled'] ?? null);
     }
 
     /**
-     * Get the price for the current request.
+     * Page price override, otherwise the site default.
      */
     public function getPrice(ServerRequestInterface $request, PaywallConfiguration $config): string
     {
-        // Check page-level price override
-        $pageRecord = $this->requestAttributeResolver->getPageRecord($request);
-        $pagePrice = ScalarValue::string($pageRecord['tx_x402_paywall_price'] ?? null);
-        if ($pagePrice !== '' && $pagePrice !== '0') {
-            return $pagePrice;
-        }
+        $pagePrice = ScalarValue::string($this->pageRecord($request)['tx_x402_paywall_price'] ?? null);
 
-        return $config->defaultPrice;
+        return $pagePrice !== '' && $pagePrice !== '0' ? $pagePrice : $config->defaultPrice;
     }
 
     /**
-     * Description of the content behind the paywall (ResourceInfo.description): the page's payment prompt
-     * text, then the page title, then the request path.
+     * ResourceInfo.description: the page's payment prompt, then the page title, then the request path.
      */
     public function getContentDescription(ServerRequestInterface $request): string
     {
-        $pageRecord = $this->requestAttributeResolver->getPageRecord($request);
+        $pageRecord = $this->pageRecord($request);
         foreach (['tx_x402_paywall_description', 'title'] as $field) {
             $value = ScalarValue::string($pageRecord[$field] ?? null);
             if ($value !== '') {
@@ -96,21 +74,40 @@ final class RouteGateResolver
         return $request->getUri()->getPath();
     }
 
-    private function matchesPattern(string $path, string $pattern): bool
+    /**
+     * Resolved page UID (0 for requests without a page).
+     */
+    public function getPageUid(ServerRequestInterface $request): int
     {
-        // Exact match
+        $pageInformation = $request->getAttribute('frontend.page.information');
+        if ($pageInformation instanceof PageInformation) {
+            return $pageInformation->getId();
+        }
+
+        $routing = $request->getAttribute('routing');
+
+        return $routing instanceof PageArguments ? $routing->getPageId() : 0;
+    }
+
+    /**
+     * @return array<string|int, mixed>
+     */
+    private function pageRecord(ServerRequestInterface $request): array
+    {
+        $pageInformation = $request->getAttribute('frontend.page.information');
+
+        return $pageInformation instanceof PageInformation ? $pageInformation->getPageRecord() : [];
+    }
+
+    private static function matchesPattern(string $path, string $pattern): bool
+    {
         if ($path === $pattern) {
             return true;
         }
-
-        // Wildcard: /api/v1/content/* matches /api/v1/content/42
         if (str_ends_with($pattern, '/*')) {
-            $prefix = substr($pattern, 0, -1);
-            return str_starts_with($path, $prefix);
+            return str_starts_with($path, substr($pattern, 0, -1));
         }
 
-        // Glob pattern
         return fnmatch($pattern, $path);
     }
-
 }

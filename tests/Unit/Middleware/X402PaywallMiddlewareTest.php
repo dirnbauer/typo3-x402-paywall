@@ -30,7 +30,6 @@ use TYPO3\CMS\Core\Http\ServerRequest;
 use TYPO3\CMS\Core\Http\StreamFactory;
 use TYPO3\CMS\Core\Routing\PageArguments;
 use TYPO3\CMS\Core\Site\Entity\Site;
-use TYPO3\CMS\Core\Site\SiteFinder;
 use TYPO3\CMS\Core\View\ViewFactoryInterface;
 use TYPO3\CMS\Frontend\Page\PageInformation;
 use TYPO3\TestingFramework\Core\Unit\UnitTestCase;
@@ -43,9 +42,9 @@ use Webconsulting\X402Paywall\Middleware\X402PaywallMiddleware;
 use Webconsulting\X402Paywall\Service\ContentTypeResolver;
 use Webconsulting\X402Paywall\Service\PaymentLogger;
 use Webconsulting\X402Paywall\Service\PaymentVerifier;
-use Webconsulting\X402Paywall\Service\RequestAttributeResolver;
 use Webconsulting\X402Paywall\Service\RouteGateResolver;
 use Webconsulting\X402Paywall\Tests\Unit\JsonTestTrait;
+use Webconsulting\X402Paywall\Utility\Json;
 
 final class X402PaywallMiddlewareTest extends UnitTestCase
 {
@@ -160,7 +159,7 @@ final class X402PaywallMiddlewareTest extends UnitTestCase
 
         $settlementHeader = base64_decode($response->getHeaderLine('PAYMENT-RESPONSE'), true);
         self::assertIsString($settlementHeader);
-        $settlement = self::decodeJsonObject($settlementHeader);
+        $settlement = Json::decodeObject($settlementHeader);
         self::assertSame(['success' => true, 'transaction' => '0xtx', 'network' => 'eip155:84532', 'payer' => '0xPayer', 'amount' => '50000'], $settlement);
         self::assertSame('', $response->getHeaderLine('X-PAYMENT-RESPONSE'));
 
@@ -195,6 +194,18 @@ final class X402PaywallMiddlewareTest extends UnitTestCase
         self::assertSame(402, $response->getStatusCode());
         self::assertSame('insufficient_funds', PaymentRequired::fromHeaderValue($response->getHeaderLine('PAYMENT-REQUIRED'))->error);
         self::assertSame([], $this->loggedRows);
+    }
+
+    #[Test]
+    public function silentFacilitatorsRejectThePayment(): void
+    {
+        $request = $this->request('/premium')->withHeader('PAYMENT-SIGNATURE', $this->paymentSignature());
+
+        $response = $this->middleware()->process($request, $this->handler());
+
+        self::assertFalse($this->handlerCalled);
+        self::assertSame(402, $response->getStatusCode());
+        self::assertSame('verification_failed', PaymentRequired::fromHeaderValue($response->getHeaderLine('PAYMENT-REQUIRED'))->error);
     }
 
     #[Test]
@@ -255,6 +266,8 @@ final class X402PaywallMiddlewareTest extends UnitTestCase
         self::assertSame(1, self::jsonPath($this->facilitatorRequests[0]['json'], 'x402Version'));
         self::assertSame('base-sepolia', self::jsonPath($this->facilitatorRequests[0]['json'], 'paymentRequirements', 'network'));
         self::assertSame('50000', self::jsonPath($this->facilitatorRequests[0]['json'], 'paymentRequirements', 'maxAmountRequired'));
+        self::assertSame('exact', self::jsonPath($this->facilitatorRequests[0]['json'], 'paymentPayload', 'scheme'));
+        self::assertSame('0xPayer', self::jsonPath(Json::decodeObject((string)base64_decode($response->getHeaderLine('PAYMENT-RESPONSE'), true)), 'payer'));
     }
 
     #[Test]
@@ -263,7 +276,7 @@ final class X402PaywallMiddlewareTest extends UnitTestCase
         $request = $this->request('/premium', siteConfig: ['legacy_v1' => true])->withHeader('Accept', 'application/json');
 
         $response = $this->middleware()->process($request, $this->handler());
-        $body = self::decodeJsonObject((string)$response->getBody());
+        $body = Json::decodeObject((string)$response->getBody());
 
         self::assertSame(1, $body['x402Version']);
         self::assertSame('50000', self::jsonPath($body, 'accepts', 0, 'maxAmountRequired'));
@@ -379,12 +392,11 @@ final class X402PaywallMiddlewareTest extends UnitTestCase
         });
 
         return new X402PaywallMiddleware(
-            new ConfigurationProvider(self::createStub(SiteFinder::class)),
-            new RouteGateResolver(new RequestAttributeResolver()),
+            new ConfigurationProvider(),
+            new RouteGateResolver(),
             new PaymentVerifier($requestFactory, new NullLogger()),
             new PaymentLogger($connectionPool, new HashService()),
             new ContentTypeResolver(),
-            new RequestAttributeResolver(),
             new PaymentRequiredResponseFactory(new ResponseFactory(), new StreamFactory(), self::createStub(ViewFactoryInterface::class)),
             $eventDispatcher,
             new NullLogger(),

@@ -25,6 +25,7 @@ use Webconsulting\X402Paywall\Domain\Model\PaymentRequirement;
 use Webconsulting\X402Paywall\Domain\Model\ResourceInfo;
 use Webconsulting\X402Paywall\Http\PaymentRequiredResponseFactory;
 use Webconsulting\X402Paywall\Tests\Unit\JsonTestTrait;
+use Webconsulting\X402Paywall\Utility\Json;
 
 final class PaymentRequiredResponseFactoryTest extends UnitTestCase
 {
@@ -54,7 +55,7 @@ final class PaymentRequiredResponseFactoryTest extends UnitTestCase
         self::assertSame('application/json', $response->getHeaderLine('Content-Type'));
         self::assertSame('no-store', $response->getHeaderLine('Cache-Control'));
         self::assertSame($this->paymentRequired->toArray(), PaymentRequired::fromHeaderValue($response->getHeaderLine('PAYMENT-REQUIRED'))->toArray());
-        self::assertSame($this->paymentRequired->toArray(), self::decodeJsonObject((string)$response->getBody()));
+        self::assertSame($this->paymentRequired->toArray(), Json::decodeObject((string)$response->getBody()));
     }
 
     #[Test]
@@ -74,7 +75,7 @@ final class PaymentRequiredResponseFactoryTest extends UnitTestCase
         $request = (new ServerRequest('https://example.test/premium'))->withHeader('Accept', 'application/json');
 
         $response = $this->factory()->create($request, $this->paymentRequired, $config);
-        $body = self::decodeJsonObject((string)$response->getBody());
+        $body = Json::decodeObject((string)$response->getBody());
 
         self::assertSame(1, $body['x402Version']);
         self::assertSame('base-sepolia', self::jsonPath($body, 'accepts', 0, 'network'));
@@ -109,7 +110,7 @@ final class PaymentRequiredResponseFactoryTest extends UnitTestCase
         self::assertSame('0.01', $assigned['price']);
         self::assertSame('USDC', $assigned['currency']);
         self::assertSame('eip155:84532', $assigned['network']);
-        self::assertSame(84532, $assigned['chainId']);
+        self::assertArrayNotHasKey('chainId', $assigned);
         self::assertSame('Premium', $assigned['description']);
     }
 

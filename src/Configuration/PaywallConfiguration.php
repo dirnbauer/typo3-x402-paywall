@@ -12,16 +12,16 @@ declare(strict_types=1);
 
 namespace Webconsulting\X402Paywall\Configuration;
 
+use Webconsulting\X402Paywall\Utility\ScalarValue;
+
 /**
- * Holds the x402 paywall configuration of one TYPO3 site (site configuration key "x402_paywall").
+ * The x402 paywall configuration of one TYPO3 site (site configuration key "x402_paywall").
  *
  * Networks are addressed by a short alias ("base", "base-sepolia", "polygon", "arbitrum", "ethereum")
  * or directly by a CAIP-2 identifier ("eip155:8453"). x402 v2 always transports CAIP-2 identifiers.
  */
-final class PaywallConfiguration
+final readonly class PaywallConfiguration
 {
-    public const SCHEME_EXACT = 'exact';
-
     public const DEFAULT_FACILITATOR_URL = 'https://x402.org/facilitator';
     public const DEFAULT_CURRENCY = 'USDC';
     public const DEFAULT_NETWORK = 'base-sepolia';
@@ -30,70 +30,67 @@ final class PaywallConfiguration
     public const DEFAULT_MAX_TIMEOUT_SECONDS = 300;
 
     /**
-     * Well-known networks with their native USDC deployment.
+     * Well-known EVM networks with their native USDC deployment and its EIP-712 domain.
      *
-     * alias => [CAIP-2 id, USDC contract, EIP-712 domain name, EIP-712 domain version, label]
-     *
-     * @var array<string, array{0: string, 1: string, 2: string, 3: string, 4: string}>
+     * @var array<string, array{caip2: string, usdc: string, name: string, version: string, label: string}>
      */
     private const NETWORKS = [
-        'base' => ['eip155:8453', '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', 'USD Coin', '2', 'Base'],
-        'base-sepolia' => ['eip155:84532', '0x036CbD53842c5426634e7929541eC2318f3dCF7e', 'USDC', '2', 'Base Sepolia (testnet)'],
-        'polygon' => ['eip155:137', '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', 'USD Coin', '2', 'Polygon'],
-        'arbitrum' => ['eip155:42161', '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', 'USD Coin', '2', 'Arbitrum One'],
-        'ethereum' => ['eip155:1', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', 'USD Coin', '2', 'Ethereum'],
+        'base' => ['caip2' => 'eip155:8453', 'usdc' => '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913', 'name' => 'USD Coin', 'version' => '2', 'label' => 'Base'],
+        'base-sepolia' => ['caip2' => 'eip155:84532', 'usdc' => '0x036CbD53842c5426634e7929541eC2318f3dCF7e', 'name' => 'USDC', 'version' => '2', 'label' => 'Base Sepolia (testnet)'],
+        'polygon' => ['caip2' => 'eip155:137', 'usdc' => '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', 'name' => 'USD Coin', 'version' => '2', 'label' => 'Polygon'],
+        'arbitrum' => ['caip2' => 'eip155:42161', 'usdc' => '0xaf88d065e77c8cC2239327C5EDb3A432268e5831', 'name' => 'USD Coin', 'version' => '2', 'label' => 'Arbitrum One'],
+        'ethereum' => ['caip2' => 'eip155:1', 'usdc' => '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', 'name' => 'USD Coin', 'version' => '2', 'label' => 'Ethereum'],
     ];
 
     /**
-     * @param string[] $freeRoutes Route patterns that are always free (e.g. "/api/v1/health")
-     * @param string[] $gatedRoutePatterns Route patterns that require payment (e.g. "/api/v1/content/*")
-     * @param int[] $gatedPageUids Page UIDs that require payment without the page toggle
+     * @param list<string> $freeRoutes Route patterns that are always free (e.g. "/api/v1/health")
+     * @param list<string> $gatedRoutePatterns Route patterns that require payment (e.g. "/api/v1/content/*")
+     * @param list<int> $gatedPageUids Page UIDs that require payment without the page toggle
      */
     public function __construct(
-        public readonly bool $enabled = false,
-        public readonly string $walletAddress = '',
-        public readonly string $network = self::DEFAULT_NETWORK,
-        public readonly string $facilitatorUrl = self::DEFAULT_FACILITATOR_URL,
-        public readonly string $currency = self::DEFAULT_CURRENCY,
-        public readonly string $defaultPrice = self::DEFAULT_PRICE,
-        public readonly string $assetAddress = '',
-        public readonly int $assetDecimals = self::DEFAULT_ASSET_DECIMALS,
-        public readonly string $assetName = '',
-        public readonly string $assetVersion = '',
-        public readonly int $maxTimeoutSeconds = self::DEFAULT_MAX_TIMEOUT_SECONDS,
-        public readonly array $freeRoutes = [],
-        public readonly array $gatedRoutePatterns = [],
-        public readonly array $gatedPageUids = [],
-        public readonly bool $legacyV1 = false,
+        public bool $enabled = false,
+        public string $walletAddress = '',
+        public string $network = self::DEFAULT_NETWORK,
+        public string $facilitatorUrl = self::DEFAULT_FACILITATOR_URL,
+        public string $currency = self::DEFAULT_CURRENCY,
+        public string $defaultPrice = self::DEFAULT_PRICE,
+        public string $assetAddress = '',
+        public int $assetDecimals = self::DEFAULT_ASSET_DECIMALS,
+        public string $assetName = '',
+        public string $assetVersion = '',
+        public int $maxTimeoutSeconds = self::DEFAULT_MAX_TIMEOUT_SECONDS,
+        public array $freeRoutes = [],
+        public array $gatedRoutePatterns = [],
+        public array $gatedPageUids = [],
+        public bool $legacyV1 = false,
     ) {}
 
     /**
-     * @param array<string, mixed> $config
+     * @param array<string, mixed> $config The "x402_paywall" block of a site configuration
      */
     public static function fromArray(array $config): self
     {
         return new self(
-            enabled: self::boolFromValue($config['enabled'] ?? false),
-            walletAddress: self::stringFromValue($config['wallet_address'] ?? ''),
-            network: self::stringFromValue($config['network'] ?? null, self::DEFAULT_NETWORK),
-            facilitatorUrl: self::stringFromValue($config['facilitator_url'] ?? null, self::DEFAULT_FACILITATOR_URL),
-            currency: self::stringFromValue($config['currency'] ?? null, self::DEFAULT_CURRENCY),
-            defaultPrice: self::stringFromValue($config['default_price'] ?? null, self::DEFAULT_PRICE),
-            assetAddress: self::stringFromValue($config['asset_address'] ?? ''),
-            assetDecimals: self::intFromValue($config['asset_decimals'] ?? null, self::DEFAULT_ASSET_DECIMALS),
-            assetName: self::stringFromValue($config['asset_name'] ?? ''),
-            assetVersion: self::stringFromValue($config['asset_version'] ?? ''),
-            maxTimeoutSeconds: self::intFromValue($config['max_timeout_seconds'] ?? null, self::DEFAULT_MAX_TIMEOUT_SECONDS),
-            freeRoutes: self::stringsFromArray($config['free_routes'] ?? []),
-            gatedRoutePatterns: self::stringsFromArray($config['gated_route_patterns'] ?? []),
-            gatedPageUids: self::intsFromArray($config['gated_page_uids'] ?? []),
-            legacyV1: self::boolFromValue($config['legacy_v1'] ?? false),
+            enabled: ScalarValue::bool($config['enabled'] ?? null),
+            walletAddress: ScalarValue::string($config['wallet_address'] ?? null),
+            network: ScalarValue::string($config['network'] ?? null, self::DEFAULT_NETWORK),
+            facilitatorUrl: ScalarValue::string($config['facilitator_url'] ?? null, self::DEFAULT_FACILITATOR_URL),
+            currency: ScalarValue::string($config['currency'] ?? null, self::DEFAULT_CURRENCY),
+            defaultPrice: ScalarValue::string($config['default_price'] ?? null, self::DEFAULT_PRICE),
+            assetAddress: ScalarValue::string($config['asset_address'] ?? null),
+            assetDecimals: ScalarValue::int($config['asset_decimals'] ?? null, self::DEFAULT_ASSET_DECIMALS),
+            assetName: ScalarValue::string($config['asset_name'] ?? null),
+            assetVersion: ScalarValue::string($config['asset_version'] ?? null),
+            maxTimeoutSeconds: ScalarValue::int($config['max_timeout_seconds'] ?? null, self::DEFAULT_MAX_TIMEOUT_SECONDS),
+            freeRoutes: ScalarValue::strings($config['free_routes'] ?? null),
+            gatedRoutePatterns: ScalarValue::strings($config['gated_route_patterns'] ?? null),
+            gatedPageUids: ScalarValue::positiveInts($config['gated_page_uids'] ?? null),
+            legacyV1: ScalarValue::bool($config['legacy_v1'] ?? null),
         );
     }
 
     /**
-     * A configuration is usable when the paywall is enabled, a receiving wallet and a facilitator are
-     * set and the asset contract for the selected network is known.
+     * Usable when enabled, a receiving wallet and a facilitator are set and the asset contract is known.
      */
     public function isValid(): bool
     {
@@ -108,24 +105,16 @@ final class PaywallConfiguration
      */
     public function getCaip2NetworkId(): string
     {
-        if (str_contains($this->network, ':')) {
-            return $this->network;
-        }
-
-        return self::NETWORKS[$this->network][0] ?? $this->network;
+        return str_contains($this->network, ':') ? $this->network : ($this->knownNetwork()['caip2'] ?? $this->network);
     }
 
     /**
-     * Network name as used by x402 v1 clients (e.g. "base-sepolia").
+     * Network alias as used by x402 v1 clients (e.g. "base-sepolia").
      */
     public function getLegacyNetworkId(): string
     {
-        if (isset(self::NETWORKS[$this->network])) {
-            return $this->network;
-        }
-
         foreach (self::NETWORKS as $alias => $definition) {
-            if ($definition[0] === $this->network) {
+            if ($alias === $this->network || $definition['caip2'] === $this->network) {
                 return $alias;
             }
         }
@@ -134,147 +123,53 @@ final class PaywallConfiguration
     }
 
     /**
-     * Token contract address used as PaymentRequirements.asset. Falls back to the native USDC deployment
-     * of well-known networks when the currency is USDC and no explicit address is configured.
+     * Token contract address (PaymentRequirements.asset). Falls back to the native USDC deployment of
+     * well-known networks when the currency is USDC and no explicit address is configured.
      */
     public function getAssetAddress(): string
     {
-        if ($this->assetAddress !== '') {
+        if ($this->assetAddress !== '' || strtoupper($this->currency) !== self::DEFAULT_CURRENCY) {
             return $this->assetAddress;
         }
 
-        if (strtoupper($this->currency) !== self::DEFAULT_CURRENCY) {
-            return '';
-        }
-
-        return $this->getKnownNetwork()[1] ?? '';
+        return $this->knownNetwork()['usdc'] ?? '';
     }
 
     /**
-     * EIP-712 domain name of the asset (PaymentRequirements.extra.name).
+     * EIP-712 domain name of the token (PaymentRequirements.extra.name).
      */
     public function getAssetName(): string
     {
-        if ($this->assetName !== '') {
-            return $this->assetName;
-        }
-
-        return $this->getKnownNetwork()[2] ?? $this->currency;
+        return $this->assetName !== '' ? $this->assetName : ($this->knownNetwork()['name'] ?? $this->currency);
     }
 
     /**
-     * EIP-712 domain version of the asset (PaymentRequirements.extra.version).
+     * EIP-712 domain version of the token (PaymentRequirements.extra.version).
      */
     public function getAssetVersion(): string
     {
-        if ($this->assetVersion !== '') {
-            return $this->assetVersion;
-        }
-
-        return $this->getKnownNetwork()[3] ?? '2';
+        return $this->assetVersion !== '' ? $this->assetVersion : ($this->knownNetwork()['version'] ?? '2');
     }
 
     /**
-     * Human-readable network label for the paywall page and the backend.
+     * Human-readable network label for the paywall page.
      */
     public function getNetworkLabel(): string
     {
-        return $this->getKnownNetwork()[4] ?? $this->getCaip2NetworkId();
+        return $this->knownNetwork()['label'] ?? $this->getCaip2NetworkId();
     }
 
     /**
-     * EVM chain id derived from the CAIP-2 identifier, 0 for non-EVM networks.
+     * @return array{caip2: string, usdc: string, name: string, version: string, label: string}|null
      */
-    public function getChainId(): int
+    private function knownNetwork(): ?array
     {
-        $caip2 = $this->getCaip2NetworkId();
-        if (!str_starts_with($caip2, 'eip155:')) {
-            return 0;
-        }
-
-        return (int)substr($caip2, 7);
-    }
-
-    /**
-     * @return array{0: string, 1: string, 2: string, 3: string, 4: string}|null
-     */
-    private function getKnownNetwork(): ?array
-    {
-        if (isset(self::NETWORKS[$this->network])) {
-            return self::NETWORKS[$this->network];
-        }
-
-        foreach (self::NETWORKS as $definition) {
-            if ($definition[0] === $this->network) {
+        foreach (self::NETWORKS as $alias => $definition) {
+            if ($alias === $this->network || $definition['caip2'] === $this->network) {
                 return $definition;
             }
         }
 
         return null;
-    }
-
-    /**
-     * @return string[]
-     */
-    private static function stringsFromArray(mixed $value): array
-    {
-        if (!is_array($value)) {
-            return [];
-        }
-
-        $result = [];
-        foreach ($value as $item) {
-            $string = self::stringFromValue($item);
-            if ($string !== '') {
-                $result[] = $string;
-            }
-        }
-
-        return $result;
-    }
-
-    /**
-     * @return int[]
-     */
-    private static function intsFromArray(mixed $value): array
-    {
-        if (!is_array($value)) {
-            return [];
-        }
-
-        $result = [];
-        foreach ($value as $item) {
-            $int = self::intFromValue($item, 0);
-            if ($int > 0) {
-                $result[] = $int;
-            }
-        }
-
-        return $result;
-    }
-
-    private static function stringFromValue(mixed $value, string $default = ''): string
-    {
-        if (!is_scalar($value)) {
-            return $default;
-        }
-
-        $string = trim((string)$value);
-
-        return $string !== '' ? $string : $default;
-    }
-
-    private static function intFromValue(mixed $value, int $default): int
-    {
-        return is_scalar($value) && $value !== '' ? (int)$value : $default;
-    }
-
-    private static function boolFromValue(mixed $value): bool
-    {
-        if (!is_scalar($value)) {
-            return false;
-        }
-
-        return filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? false;
     }
 }
