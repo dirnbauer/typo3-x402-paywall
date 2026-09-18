@@ -1,31 +1,29 @@
-# Composer
-/vendor/
-/composer.lock
-
-# TYPO3 / test runtime
-/var/
-/public/
-/.Build/
-/typo3temp/
-
-# Tooling caches
-/.php-cs-fixer.cache
-/.phpunit.cache/
-/.phpunit.result.cache
-/.phpstan/
-/.phplint.cache
-/phpunit.xml
-
-# IDE and OS
+# OS / IDE
+.DS_Store
+._*
+Thumbs.db
 /.idea/
 /.vscode/
 /.claude/
 *.iml
-.DS_Store
-Thumbs.db
 
-# Build artifacts and reports
+# Composer / TYPO3 runtime
+/.Build/
+/vendor/
+/node_modules/
+/public/
+/var/
+/typo3temp/
+/composer.lock
+
+# Tooling caches and reports
+*.cache
+/.php-cs-fixer.cache
+/.phpunit.cache/
+/.phpunit.result.cache
+/.phpstan/
 /Build/Reports/
 /Build/Coverage/
+*.map
 /*.zip
 /*.tar.gz

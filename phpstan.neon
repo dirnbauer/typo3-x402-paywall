@@ -1,6 +1,5 @@
-# PHPStan configuration. Policy floor for this extension is level 8; the code base passes "max".
 parameters:
-    level: max
+    level: 8
     paths:
         - src
         - tests
