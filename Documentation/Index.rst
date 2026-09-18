@@ -13,7 +13,7 @@ TYPO3 x402 Paywall
     |composer_name|
 
 :Version:
-    1.2.0
+    1.3.0
 
 :Language:
     en
@@ -28,15 +28,11 @@ TYPO3 x402 Paywall
 protocol. It answers ``402 Payment Required`` with a ``PAYMENT-REQUIRED``
 header, verifies and settles ``PAYMENT-SIGNATURE`` payloads through an x402
 facilitator, serves the paid resource with a ``PAYMENT-RESPONSE`` header, logs
-settled payments and exposes a backend dashboard and MCP tools.
+payments and offers a backend dashboard and MCP tools.
 
 The implementation follows the |x402_spec| published in the
 `coinbase/x402 <https://github.com/coinbase/x402/tree/main/specs>`__
 repository (HTTP transport v2, ``exact`` scheme on EVM networks).
-
-..  important::
-
-    This release requires TYPO3 14.3+ and PHP 8.4+.
 
 ..  toctree::
     :maxdepth: 2
@@ -46,4 +42,4 @@ repository (HTTP transport v2, ``exact`` scheme on EVM networks).
     Configuration/Index
     Usage/Index
     Developer/Index
-    Security/Index
+    Changelog/Index

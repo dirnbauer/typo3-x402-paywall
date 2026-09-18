@@ -12,7 +12,7 @@ Site settings
 =============
 
 All settings live below the ``x402_paywall`` key of the site configuration.
-The paywall is only active when ``enabled`` is true, ``wallet_address`` and
+The paywall is active when ``enabled`` is true, ``wallet_address`` and
 ``facilitator_url`` are set and the payment asset is known for the network.
 
 ..  literalinclude:: _site-config.example.yaml
@@ -40,18 +40,19 @@ The paywall is only active when ``enabled`` is true, ``wallet_address`` and
 
     Network alias or CAIP-2 identifier. Aliases: ``base`` (``eip155:8453``),
     ``base-sepolia`` (``eip155:84532``), ``polygon`` (``eip155:137``),
-    ``arbitrum`` (``eip155:42161``), ``ethereum`` (``eip155:1``). Any
-    ``eip155:<chainId>`` value is accepted; combine it with
-    :confval:`asset_address <x402-paywall-asset-address>`. x402 v2 always
-    transports the CAIP-2 identifier.
+    ``arbitrum`` (``eip155:42161``), ``ethereum`` (``eip155:1``). Other
+    ``eip155:<chainId>`` values need :confval:`asset_address <x402-paywall-asset-address>`.
+    x402 v2 always transports the CAIP-2 identifier.
 
 ..  confval:: facilitator_url
     :name: x402-paywall-facilitator-url
     :type: string
     :default: https://x402.org/facilitator
 
-    Base URL of the facilitator. ``/verify``, ``/settle`` and ``/supported``
-    are appended.
+    Base URL of the facilitator; ``/verify`` and ``/settle`` are appended.
+    The public facilitator settles on testnets. For mainnet use a facilitator
+    of your choice (for example the Coinbase Developer Platform facilitator)
+    and check its ``GET /supported`` response for your network.
 
 ..  confval:: currency
     :name: x402-paywall-currency
@@ -66,8 +67,8 @@ The paywall is only active when ``enabled`` is true, ``wallet_address`` and
     :type: string
     :default: "0.01"
 
-    Decimal price used when a page has no override. It is converted to atomic
-    units with :confval:`asset_decimals <x402-paywall-asset-decimals>`
+    Decimal price used when a page has no override; converted to atomic units
+    with :confval:`asset_decimals <x402-paywall-asset-decimals>`
     (``"0.01"`` becomes ``"10000"`` for USDC).
 
 ..  confval:: asset_address
@@ -76,8 +77,7 @@ The paywall is only active when ``enabled`` is true, ``wallet_address`` and
     :default: ""
 
     Token contract address (``PaymentRequirements.asset``). Required for
-    currencies other than USDC or for networks without a known USDC
-    deployment.
+    currencies other than USDC or networks without a known USDC deployment.
 
 ..  confval:: asset_decimals
     :name: x402-paywall-asset-decimals
@@ -124,8 +124,7 @@ The paywall is only active when ``enabled`` is true, ``wallet_address`` and
     :default: []
 
     Paths that require payment, same syntax as ``free_routes``. The path must
-    still resolve to a TYPO3 page or route, otherwise the page resolver
-    answers 404 first.
+    still resolve to a TYPO3 page or route.
 
 ..  confval:: gated_page_uids
     :name: x402-paywall-gated-page-uids
@@ -144,13 +143,12 @@ The paywall is only active when ``enabled`` is true, ``wallet_address`` and
     shape (``maxAmountRequired``, alias network names) and settlements are
     mirrored into ``X-PAYMENT-RESPONSE``. The ``PAYMENT-REQUIRED`` header
     always stays v2. The public facilitator still lists ``x402Version: 1``
-    kinds, which is why the option exists; disable it once your clients moved
-    to v2.
+    kinds; disable the option once your clients moved to v2.
 
 ..  _configuration-page-fields:
 
-Page fields
-===========
+Gating a page
+=============
 
 The :guilabel:`x402 Paywall` tab in the page properties offers:
 
@@ -160,12 +158,7 @@ The :guilabel:`x402 Paywall` tab in the page properties offers:
     ``resource.description`` in the ``PaymentRequired`` document and the text
     on the paywall page; falls back to the page title.
 
-..  _configuration-records:
-
-Detail records
-==============
-
 Detail pages of EXT:news, EXT:blog and common event extensions are gated as
-pages, but the payment log stores the record type and UID taken from the
-plugin parameters (``tx_news_pi1[news]``, ``tx_blog_pi1[post]``,
-``tx_events2_pi1[event]``, ...), so revenue can be attributed per record.
+pages, but the payment log stores the record type and UID from the plugin
+parameters (``tx_news_pi1[news]``, ``tx_blog_pi1[post]``,
+``tx_events2_pi1[event]``, ...) so revenue can be attributed per record.

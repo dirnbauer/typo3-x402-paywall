@@ -1,6 +1,4 @@
-# Example TYPO3 site configuration with the x402 paywall.
-# Add the x402_paywall block to config/sites/<site-identifier>/config.yaml
-
+# config/sites/<site-identifier>/config.yaml
 base: https://www.example.com
 languages:
   - title: English
@@ -10,42 +8,17 @@ languages:
 
 x402_paywall:
   enabled: true
-
-  # Wallet that receives the payments (EVM address)
-  wallet_address: "0xYOUR_WALLET_ADDRESS"
-
-  # Network alias (base, base-sepolia, polygon, arbitrum, ethereum) or a CAIP-2 id such as eip155:8453
-  network: base-sepolia
-
-  # x402 facilitator, called on /verify, /settle and /supported
-  facilitator_url: https://x402.org/facilitator
-
-  # Currency label and default price (decimal, in the asset's units)
+  wallet_address: "0xYOUR_WALLET_ADDRESS"       # receives the payments
+  network: base-sepolia                          # alias or CAIP-2 id such as eip155:8453
+  facilitator_url: https://x402.org/facilitator  # /verify, /settle, /supported are appended
   currency: USDC
-  default_price: "0.01"
-
-  # Token used for payment. Leave empty for USDC on the well-known networks.
-  # asset_address: "0x..."
+  default_price: "0.01"                          # decimal, in the asset's units
+  # asset_address: "0x..."                       # token contract (empty: USDC of the network)
   # asset_decimals: 6
-  # asset_name: "USD Coin"    # EIP-712 domain name of the token
-  # asset_version: "2"        # EIP-712 domain version of the token
-
-  # Seconds a signed authorization stays valid
-  max_timeout_seconds: 300
-
-  # Routes that always stay free (exact path, /prefix/* or glob)
-  free_routes:
-    - "/"
-    - "/api/v1/health"
-    - "/api/v1/public/*"
-
-  # Routes that require payment (headless / API mode)
-  gated_route_patterns:
-    - "/api/v1/content/*"
-    - "/api/v1/premium/*"
-
-  # Page UIDs that require payment without the page toggle
+  # asset_name: "USD Coin"                       # EIP-712 domain name of the token
+  # asset_version: "2"                           # EIP-712 domain version of the token
+  max_timeout_seconds: 300                       # validity of a signed authorization
+  free_routes: ["/", "/api/v1/health", "/api/v1/public/*"]
+  gated_route_patterns: ["/api/v1/content/*"]
   gated_page_uids: []
-
-  # Also accept x402 v1 clients (X-PAYMENT header, v1 JSON body)
-  legacy_v1: false
+  legacy_v1: false                               # also accept x402 v1 clients

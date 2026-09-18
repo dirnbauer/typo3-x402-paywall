@@ -3,6 +3,68 @@
 All notable changes to `webconsulting/typo3-x402-paywall` are documented in
 this file.
 
+## [1.3.0] - 2026-09-18
+
+### Protocol
+
+Re-verified on 2026-09-18 against `coinbase/x402`
+[`specs/x402-specification-v2.md`](https://github.com/coinbase/x402/blob/main/specs/x402-specification-v2.md)
+(still document version v2.0, 2025-12-09),
+[`specs/transports-v2/http.md`](https://github.com/coinbase/x402/blob/main/specs/transports-v2/http.md)
+and `GET https://x402.org/facilitator/supported`. Header names, the
+`PaymentRequired` / `PaymentPayload` / `SettlementResponse` shapes and the
+`/verify` and `/settle` request bodies are unchanged; the transport spec
+declares 402 bodies an implementation concern (the JSON copy stays). x402 v1
+is not retired (the facilitator still advertises `x402Version: 1` kinds), so
+`legacy_v1` stays available.
+
+- `PaymentRequired.extensions` (optional in the spec) is decoded and
+  re-emitted.
+- The client's `PaymentPayload` is forwarded to the facilitator verbatim
+  instead of being re-serialised from parsed fields, so `extensions` and
+  scheme-specific fields such as `assetTransferMethod` survive.
+- `PAYMENT-RESPONSE` on a v1 payload sent through `PAYMENT-SIGNATURE` is now
+  mirrored into `X-PAYMENT-RESPONSE` as well.
+
+### Changed
+
+- Typed facilitator results: `PaymentVerifier::verify()` returns a
+  `VerifyResponse`, `settle()` a `SettlementResponse` (also the model behind
+  the `PAYMENT-RESPONSE` header and the payment log).
+- Everything x402 v1 (headers, alias networks, `maxAmountRequired` body,
+  top-level scheme/network) lives in `Legacy\X402V1`; the domain models are
+  pure v2.
+- `ReportingPeriod` enum replaces the duplicated period `match` in the
+  dashboard controller and `x402_stats`.
+- `RouteGateResolver` absorbs `RequestAttributeResolver`;
+  `PaymentLogger::logPayment()` takes the `SettlementResponse`.
+- The simulator builds the mock `PAYMENT-SIGNATURE` from the requirement the
+  probed URL actually offers, so the facilitator rejection is real; the
+  response is `{status, headers, body, decodedRequirement}`.
+- Backend labels are resolved through `LanguageServiceFactory`.
+- MCP tools are tagged once via `_instanceof` in `Services.yaml`.
+- PHPStan level 8 (portfolio policy, was `max`); dependencies refreshed
+  (PHPUnit 13.3, testing-framework 9.7, PHPStan 2.2).
+- README and manual rewritten; the Security chapter merged into Developer, a
+  Changelog chapter added.
+
+### Removed
+
+- `RequestAttributeResolver`, the `statsAction` AJAX route
+  (`Configuration/Backend/AjaxRoutes.php`), `PaymentVerifier::supported()`,
+  `supportsRequirement()` and `testConnection()`,
+  `PaywallConfiguration::getChainId()`, `PaymentRequired::toLegacyArray()`,
+  `PaymentRequirement::toLegacyArray()`, `PaymentPayload::isLegacy()`, the
+  pre-1.2.0 object-asset shim, the unused `chainId` / base64 data attributes
+  of the paywall page and the fabricated `steps` of the simulator response.
+
+### Added
+
+- Tests for `X402V1`, `SettlementResponse`, `VerifyResponse`,
+  `ReportingPeriod`, `ConfigurationProvider`, `ScalarValue` / `Json`, route
+  pattern gating through the real middleware stack, and a functional test of
+  the payment log queries and the log-backed MCP tools (99 unit, 8 functional).
+
 ## [1.2.0] - 2026-09-12
 
 ### Protocol
