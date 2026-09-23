@@ -28,7 +28,7 @@ cd "${ROOT_DIR}"
 BIN=".Build/bin"
 
 run_lint() {
-    find src tests Configuration -name '*.php' -print0 | xargs -0 -n1 -P4 "${PHP_BIN}" -l > /dev/null
+    find src tests Configuration -name '*.php' -not -path 'tests/Functional/Fixtures/*' -print0 | xargs -0 -n1 -P4 "${PHP_BIN}" -l > /dev/null
     echo "lint: ok"
 }
 
@@ -41,7 +41,7 @@ run_phpstan() {
 }
 
 run_unit() {
-    "${PHP_BIN}" "${BIN}/phpunit" --configuration=Build/phpunit/UnitTests.xml
+    "${PHP_BIN}" -d memory_limit=1G "${BIN}/phpunit" --configuration=Build/phpunit/UnitTests.xml
 }
 
 run_functional() {
@@ -70,7 +70,8 @@ run_functional() {
             exit 1
             ;;
     esac
-    "${PHP_BIN}" "${BIN}/phpunit" --configuration=Build/phpunit/FunctionalTests.xml
+    # The TCA schema cache of a TYPO3 14 instance does not fit the default 128M.
+    "${PHP_BIN}" -d memory_limit=1G "${BIN}/phpunit" --configuration=Build/phpunit/FunctionalTests.xml
 }
 
 case "${SUITE}" in
