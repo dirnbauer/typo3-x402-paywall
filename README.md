@@ -2,7 +2,7 @@
 
 [![TYPO3 14.3+](https://img.shields.io/badge/TYPO3-14.3%2B-orange.svg)](https://get.typo3.org/14)
 [![PHP 8.4+](https://img.shields.io/badge/PHP-8.4%2B-777bb4.svg)](https://www.php.net/)
-[![x402 v2](https://img.shields.io/badge/x402-v2.0-1b7a95.svg)](https://github.com/coinbase/x402/blob/main/specs/x402-specification-v2.md)
+[![x402 v2](https://img.shields.io/badge/x402-v2-1b7a95.svg)](https://github.com/x402-foundation/x402/blob/6fe0d4bfd104e8c61ae0b6aeaefe9da506d502ff/specs/x402-specification-v2.md)
 [![PHPStan 8](https://img.shields.io/badge/PHPStan-level%208-blue.svg)](phpstan.neon)
 [![CI](https://github.com/dirnbauer/typo3-x402-paywall/actions/workflows/ci.yml/badge.svg)](https://github.com/dirnbauer/typo3-x402-paywall/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-GPL--2.0--or--later-blue.svg)](LICENSE)
@@ -15,11 +15,17 @@ is served in the same request. No accounts, no sessions, no card forms.
 ## What it is
 
 - PSR-15 middleware implementing the x402 **v2** HTTP transport (`PAYMENT-REQUIRED`,
-  `PAYMENT-SIGNATURE`, `PAYMENT-RESPONSE`), verified against specification v2.0 (2025-12-09)
-  and the live `x402.org` facilitator (`/verify`, `/settle`, `/supported`).
+  `PAYMENT-SIGNATURE`, `PAYMENT-RESPONSE`), checked against the specification of the
+  [x402 Foundation](https://github.com/x402-foundation/x402/tree/6fe0d4bfd104e8c61ae0b6aeaefe9da506d502ff/specs)
+  and the live `x402.org` facilitator (`/verify`, `/settle`, `/supported`): failed settlements
+  answer 402 with `PAYMENT-RESPONSE`, `settlement_pending` is retried once and logged as pending.
+- Facilitators: `x402.org` (testnets only) or any compatible one, including the Coinbase
+  Developer Platform facilitator with signed API-key tokens (`facilitator_auth: cdp`).
 - Gating by page toggle (with price override and payment prompt), page UID list or route patterns.
 - Wallet paywall page for browsers (EIP-1193 wallets such as MetaMask, Coinbase Wallet, Rabby).
-- Payment log (`tx_x402_payment_log`), backend dashboard and request simulator.
+- Payment log (`tx_x402_payment_log`) and the backend module **Content > x402 Paywall**:
+  a dashboard with revenue per currency, settlement states and a configuration check per site,
+  and a simulator that plays the client side against your sites.
 - MCP tools `x402_probe`, `x402_decode_header`, `x402_gated_pages`, `x402_stats`,
   `x402_transactions` for agents (via `hn/typo3-mcp-server`).
 - PSR-14 events `PaymentRequiredEvent` and `PaymentReceivedEvent`.
@@ -32,7 +38,7 @@ is served in the same request. No accounts, no sessions, no card forms.
 | TYPO3       | 14.3 LTS or later, Composer mode                                                         |
 | PHP         | 8.4 or later                                                                             |
 | Wallet      | EVM address on Base, Base Sepolia, Polygon, Arbitrum, Ethereum or any `eip155:<chainId>` |
-| Facilitator | Outbound HTTPS to an x402 facilitator (default `https://x402.org/facilitator`)           |
+| Facilitator | Outbound HTTPS to an x402 facilitator (default `https://x402.org/facilitator`, testnets)  |
 | Optional    | `hn/typo3-mcp-server` to expose the MCP tools                                            |
 
 ## Install
@@ -56,9 +62,21 @@ x402_paywall:
   gated_route_patterns: ["/api/v1/content/*"]
   free_routes: ["/api/v1/health"]
   legacy_v1: false                 # also accept x402 v1 clients (X-PAYMENT)
+  service_name: "Example Research" # optional discovery metadata: service_tags, service_icon_url
 ```
 
-Then tick **Enable x402 paywall** in the page properties of each paid page (tab *x402 Paywall*),
+For mainnet, point `facilitator_url` to a mainnet facilitator, e.g. Coinbase CDP:
+
+```yaml
+x402_paywall:
+  network: base
+  facilitator_url: https://api.cdp.coinbase.com/platform/v2/x402
+  facilitator_auth: cdp            # key from CDP_API_KEY_ID / CDP_API_KEY_SECRET or the settings below
+  # facilitator_api_key_id: '%env(MY_CDP_KEY_ID)%'
+  # facilitator_api_key_secret: '%env(MY_CDP_KEY_SECRET)%'
+```
+
+Then tick **Sell this page with x402** in the page properties of each paid page (tab *x402 Paywall*),
 optionally with a price override and a prompt text. Route patterns gate headless endpoints
 without a toggle; free routes always win. For tokens other than USDC set `asset_address`,
 `asset_decimals`, `asset_name` and `asset_version` (the EIP-712 domain of the token).
@@ -76,12 +94,14 @@ curl -s -H 'Accept: application/json' https://example.com/premium | jq '.accepts
 #    base64-encode the PaymentPayload and retry
 curl -si -H "PAYMENT-SIGNATURE: $(cat payment-payload.b64)" https://example.com/premium | grep -i '^HTTP\|^PAYMENT-RESPONSE'
 # HTTP/2 200  +  PAYMENT-RESPONSE: base64 {"success":true,"transaction":"0x…","network":"eip155:84532","payer":"0x…"}
+# A payment that verifies but does not settle: HTTP 402 + PAYMENT-RESPONSE {"success":false,"errorReason":"…"}
 ```
 
 Browsers (`Accept: text/html`) get a paywall page that connects a wallet, signs and reloads the
-paid content. **Web > x402 Paywall** (admin) shows revenue, top pages, recent transactions and a
-simulator that replays the 402 and the facilitator rejection of a mock signature against your
-own URLs. Agents call the MCP tools, e.g. `x402_probe {"url": "https://example.com/premium"}`.
+paid content. **Content > x402 Paywall** (admin) has a dashboard (revenue, settlement states,
+latest attempts, configuration problems per site) and a simulator that requests a paywalled
+page, sends a payment with an invalid signature or asks the facilitator what it supports.
+Agents call the MCP tools, e.g. `x402_probe {"url": "https://example.com/premium"}`.
 
 ## Develop
 
@@ -94,7 +114,8 @@ Build/Scripts/runTests.sh -s functional -d mariadb   # needs typo3Database* envi
 ## Docs
 
 Manual: [Documentation/Index.rst](Documentation/Index.rst) · Release notes:
-[CHANGELOG.md](CHANGELOG.md) · Protocol: [coinbase/x402 specs](https://github.com/coinbase/x402/tree/main/specs)
+[CHANGELOG.md](CHANGELOG.md) · Protocol:
+[x402-foundation/x402 specs](https://github.com/x402-foundation/x402/tree/6fe0d4bfd104e8c61ae0b6aeaefe9da506d502ff/specs)
 
 ## License
 

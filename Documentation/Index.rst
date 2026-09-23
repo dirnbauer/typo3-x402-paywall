@@ -13,7 +13,7 @@ TYPO3 x402 Paywall
     |composer_name|
 
 :Version:
-    1.3.0
+    1.4.0
 
 :Language:
     en
@@ -30,9 +30,9 @@ header, verifies and settles ``PAYMENT-SIGNATURE`` payloads through an x402
 facilitator, serves the paid resource with a ``PAYMENT-RESPONSE`` header, logs
 payments and offers a backend dashboard and MCP tools.
 
-The implementation follows the |x402_spec| published in the
-`coinbase/x402 <https://github.com/coinbase/x402/tree/main/specs>`__
-repository (HTTP transport v2, ``exact`` scheme on EVM networks).
+The implementation follows the |x402_spec| published by the
+`x402 Foundation <https://github.com/x402-foundation/x402/tree/6fe0d4bfd104e8c61ae0b6aeaefe9da506d502ff/specs>`__
+(HTTP transport v2, ``exact`` scheme on EVM networks with EIP-3009).
 
 ..  toctree::
     :maxdepth: 2

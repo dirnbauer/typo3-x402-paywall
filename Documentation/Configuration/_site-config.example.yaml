@@ -10,7 +10,7 @@ x402_paywall:
   enabled: true
   wallet_address: "0xYOUR_WALLET_ADDRESS"       # receives the payments
   network: base-sepolia                          # alias or CAIP-2 id such as eip155:8453
-  facilitator_url: https://x402.org/facilitator  # /verify, /settle, /supported are appended
+  facilitator_url: https://x402.org/facilitator  # testnets only; /verify, /settle, /supported are appended
   currency: USDC
   default_price: "0.01"                          # decimal, in the asset's units
   # asset_address: "0x..."                       # token contract (empty: USDC of the network)
@@ -22,3 +22,14 @@ x402_paywall:
   gated_route_patterns: ["/api/v1/content/*"]
   gated_page_uids: []
   legacy_v1: false                               # also accept x402 v1 clients
+  # Discovery metadata (ResourceInfo), optional
+  service_name: "Example Research"               # printable ASCII, at most 32 characters
+  service_tags: ["research", "reports"]          # at most 5 tags, 32 characters each
+  service_icon_url: https://www.example.com/icon.png
+
+# Mainnet through the Coinbase Developer Platform facilitator:
+#   network: base
+#   facilitator_url: https://api.cdp.coinbase.com/platform/v2/x402
+#   facilitator_auth: cdp
+#   facilitator_api_key_id: '%env(CDP_API_KEY_ID)%'          # optional: the variables are read anyway
+#   facilitator_api_key_secret: '%env(CDP_API_KEY_SECRET)%'

@@ -49,10 +49,42 @@ The paywall is active when ``enabled`` is true, ``wallet_address`` and
     :type: string
     :default: https://x402.org/facilitator
 
-    Base URL of the facilitator; ``/verify`` and ``/settle`` are appended.
-    The public facilitator settles on testnets. For mainnet use a facilitator
-    of your choice (for example the Coinbase Developer Platform facilitator)
-    and check its ``GET /supported`` response for your network.
+    Base URL of the facilitator; ``/verify``, ``/settle`` and ``/supported``
+    are appended. The public facilitator of x402.org settles on testnets only
+    (Base Sepolia, Solana devnet); the dashboard flags a mainnet network that
+    points to it. For mainnet use, for example, the Coinbase Developer
+    Platform facilitator ``https://api.cdp.coinbase.com/platform/v2/x402``
+    together with :confval:`facilitator_auth <x402-paywall-facilitator-auth>`,
+    and check its answer to ``GET /supported`` in the simulator.
+
+..  confval:: facilitator_auth
+    :name: x402-paywall-facilitator-auth
+    :type: string
+    :default: ""
+
+    Authentication towards the facilitator. Empty: none (x402.org). ``cdp``:
+    every request carries ``Authorization: Bearer <JWT>``, a two-minute token
+    bound to the method and URL of the request and signed with a CDP secret
+    API key, as the CDP SDKs issue it. ECDSA keys (PEM, ES256) and Ed25519
+    keys (base64, EdDSA) are supported; Ed25519 needs the PHP extension
+    ``sodium``.
+
+..  confval:: facilitator_api_key_id
+    :name: x402-paywall-facilitator-api-key-id
+    :type: string
+    :default: environment variable CDP_API_KEY_ID
+
+    Id of the CDP API key. Leave it empty to read ``CDP_API_KEY_ID`` from the
+    environment, or reference any variable with ``'%env(NAME)%'``.
+
+..  confval:: facilitator_api_key_secret
+    :name: x402-paywall-facilitator-api-key-secret
+    :type: string
+    :default: environment variable CDP_API_KEY_SECRET
+
+    Secret of the CDP API key. Keep it out of the YAML file: leave it empty to
+    read ``CDP_API_KEY_SECRET`` from the environment, or use
+    ``'%env(NAME)%'``. Line breaks of a PEM key may be written as ``\n``.
 
 ..  confval:: currency
     :name: x402-paywall-currency
@@ -145,6 +177,30 @@ The paywall is active when ``enabled`` is true, ``wallet_address`` and
     always stays v2. The public facilitator still lists ``x402Version: 1``
     kinds; disable the option once your clients moved to v2.
 
+..  confval:: service_name
+    :name: x402-paywall-service-name
+    :type: string
+    :default: ""
+
+    ``resource.serviceName`` for discovery listings: printable ASCII, at most
+    32 characters. Other values are ignored and reported on the dashboard.
+
+..  confval:: service_tags
+    :name: x402-paywall-service-tags
+    :type: array
+    :default: []
+
+    ``resource.tags``: at most five topical tags of printable ASCII with at
+    most 32 characters each.
+
+..  confval:: service_icon_url
+    :name: x402-paywall-service-icon-url
+    :type: string
+    :default: ""
+
+    ``resource.iconUrl``: absolute ``http``/``https`` URL of an icon, at most
+    2048 characters.
+
 ..  _configuration-page-fields:
 
 Gating a page
@@ -152,9 +208,10 @@ Gating a page
 
 The :guilabel:`x402 Paywall` tab in the page properties offers:
 
-*   :guilabel:`Enable x402 paywall`: gates the page.
-*   :guilabel:`Price (USDC)`: overrides ``default_price``.
-*   :guilabel:`Content description for payment prompt`: becomes
+*   :guilabel:`Sell this page with x402`: gates the page.
+*   :guilabel:`Price`: overrides ``default_price``, in the currency of the
+    site configuration.
+*   :guilabel:`Description for the payment prompt`: becomes
     ``resource.description`` in the ``PaymentRequired`` document and the text
     on the paywall page; falls back to the page title.
 

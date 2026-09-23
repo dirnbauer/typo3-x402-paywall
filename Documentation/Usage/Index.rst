@@ -24,7 +24,7 @@ A request without payment receives the ``PaymentRequired`` document in the
 
     {
       "x402Version": 2,
-      "resource": {"url": "https://example.com/premium", "description": "Premium article", "mimeType": "application/json"},
+      "resource": {"url": "https://example.com/premium", "description": "Premium article", "mimeType": "text/html"},
       "accepts": [{
         "scheme": "exact",
         "network": "eip155:84532",
@@ -46,7 +46,8 @@ and ``version`` from ``extra``, ``chainId`` from the CAIP-2 network,
     {
       "x402Version": 2,
       "resource": {"url": "https://example.com/premium"},
-      "accepted": {"scheme": "exact", "network": "eip155:84532", "amount": "10000", "asset": "0x036C…", "payTo": "0xYOUR_WALLET", "maxTimeoutSeconds": 300},
+      "accepted": {"scheme": "exact", "network": "eip155:84532", "amount": "10000", "asset": "0x036C…", "payTo": "0xYOUR_WALLET",
+                   "maxTimeoutSeconds": 300, "extra": {"name": "USDC", "version": "2"}},
       "payload": {
         "signature": "0x…",
         "authorization": {"from": "0xPAYER", "to": "0xYOUR_WALLET", "value": "10000",
@@ -61,13 +62,28 @@ and ``version`` from ``extra``, ``chainId`` from the CAIP-2 network,
     # HTTP/2 200
     # PAYMENT-RESPONSE: base64 {"success":true,"transaction":"0x…","network":"eip155:84532","payer":"0x…"}
 
+The ``accepted`` object must repeat the offered requirement exactly, including
+``maxTimeoutSeconds`` and every ``extra`` entry; TYPO3 forwards the payload to
+the facilitator byte for byte as the client sent it.
+
 Rejections answer 402 again; the ``error`` field of the ``PaymentRequired``
 document carries the reason (``invalid_payload``, ``invalid_x402_version``,
 ``invalid_payment_requirements`` from TYPO3; ``insufficient_funds``,
-``invalid_exact_evm_payload_signature``, ... from the facilitator). Requests
-whose TYPO3 response is not 2xx are never settled. Any x402 v2 client works,
-for example the packages published in the
-`coinbase/x402 <https://github.com/coinbase/x402>`__ repository.
+``invalid_exact_evm_payload_signature``, ``unexpected_verify_error``, ... from
+the facilitator). Requests whose TYPO3 response is not 2xx are never settled.
+
+A payment that verifies but does not settle answers 402 with the
+``SettlementResponse`` in ``PAYMENT-RESPONSE`` (``success: false``,
+``errorReason``) and no ``PAYMENT-REQUIRED`` header, as the HTTP transport
+specifies. ``settlement_pending`` (broadcast, not yet confirmed) is retried
+once, like the reference servers do; if it stays pending, the 402 carries the
+transaction hash, the payment log records it as *pending* and the client
+should check the transaction before paying again. A facilitator that stops
+answering after the request was sent is treated the same way
+(``unexpected_settle_error``, logged as *pending*).
+
+Any x402 v2 client works, for example the SDKs of the
+`x402 Foundation <https://github.com/x402-foundation/x402>`__.
 
 ..  _usage-browser:
 
@@ -87,14 +103,31 @@ response. Brand the page through the CSS custom properties in
 Backend module
 ==============
 
-:guilabel:`Web > x402 Paywall` (admin only) shows revenue for today, seven
-days, thirty days and all time, the top pages and the most recent
-transactions. The :guilabel:`Simulator` sends a GET to a public URL and shows
-status, headers, body and the decoded ``PAYMENT-REQUIRED`` header. The *Mock
-signature* scenario answers the 402 like a client would, with a syntactically
-valid ``PaymentPayload`` for the offered requirement and a dummy signature:
-TYPO3 forwards it to the facilitator, which rejects it, proving that the
-verification path is wired.
+:guilabel:`Content > x402 Paywall` (admin only, live workspace) has two
+submodules; the document header switches between them.
+
+:guilabel:`Dashboard`
+    Settled revenue for today, seven days, thirty days and all time, per
+    currency; a warning when settlements are pending; every site with an
+    ``x402_paywall`` block, its network, price and facilitator, and the
+    configuration mistakes that keep payments from working (for example a
+    mainnet network on the testnet facilitator, or CDP authentication without
+    a key); the latest settlement attempts with status, payer and a link to
+    the transaction on the block explorer; the top pages of the last 30 days.
+
+:guilabel:`Simulator`
+    Plays the client side against a site: *Request without payment* requests
+    the first paywalled page of the site, *Payment with an invalid signature*
+    answers the 402 like a wallet with a well-formed ``PaymentPayload`` whose
+    signature is invalid (the facilitator rejects it, which proves the
+    verification path), *Gated API route* requests the first
+    ``gated_route_patterns`` entry, and *Facilitator capabilities* calls
+    ``GET /supported`` with the site's facilitator credentials and checks the
+    ``exact`` scheme on the site's network. Every request and response is
+    shown with the decoded ``PAYMENT-REQUIRED``, ``PAYMENT-SIGNATURE`` and
+    ``PAYMENT-RESPONSE`` headers. Requests go to the selected site (also when
+    it resolves to a private address, as in local development) or to public
+    http(s) URLs; nothing is paid.
 
 ..  _usage-demo:
 
@@ -104,9 +137,9 @@ Demo flow on Base Sepolia
 #.  Configure the site with ``network: base-sepolia``, your wallet and the
     public facilitator (see :ref:`configuration-site-settings`), enable the
     toggle on a page and set a price such as ``0.05``.
-#.  Run the *Plain GET* and *Mock signature* simulator scenarios against the
-    page URL: the first returns 402 with the decoded requirement, the second a
-    402 whose ``error`` names the facilitator's rejection.
+#.  Run the *Request without payment* and *Payment with an invalid signature*
+    simulator scenarios: the first returns 402 with the decoded requirement,
+    the second a 402 whose ``error`` names the facilitator's rejection.
 #.  Fund a browser wallet with Base Sepolia ETH (gas is paid by the
     facilitator, but the wallet needs an account) and testnet USDC from the
     `Circle faucet <https://faucet.circle.com>`__, open the page, click

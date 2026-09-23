@@ -3,6 +3,104 @@
 All notable changes to `webconsulting/typo3-x402-paywall` are documented in
 this file.
 
+## [1.4.0] - 2026-09-23
+
+### Protocol
+
+Checked on 2026-09-23 against the specification of the x402 Foundation
+([`x402-foundation/x402`](https://github.com/x402-foundation/x402) at
+`6fe0d4bfd104e8c61ae0b6aeaefe9da506d502ff`; the former `coinbase/x402` repository is no
+longer maintained): `specs/x402-specification-v2.md`, `specs/transports-v2/http.md`,
+`specs/schemes/exact/scheme_exact_evm.md`, the TypeScript reference server and
+`GET https://x402.org/facilitator/supported`. The protocol is still x402 v2; header names
+are unchanged.
+
+- A payment that verifies but does not settle answers `402` with the `SettlementResponse`
+  in `PAYMENT-RESPONSE` (`success: false`, `errorReason`, `transaction`, `network`, `payer`)
+  and a JSON copy as body, no longer with `PAYMENT-REQUIRED` (HTTP transport v2,
+  "Settlement Response Delivery"). x402 v1 clients keep the v1 body plus `X-PAYMENT-RESPONSE`.
+- `settlement_pending` (broadcast, not yet confirmed; always with a transaction hash) is
+  retried once with the identical request, as the reference servers do. If it stays pending,
+  the 402 carries the hash and the payment log records the new status `pending`. A settle
+  request that got no answer after it was sent is logged as `pending` too
+  (`unexpected_settle_error` towards the client), a failure while connecting as `failed`.
+- The payment payload is forwarded to the facilitator byte for byte: JSON objects stay
+  objects, so an empty `"extensions": {}` no longer turns into `[]`.
+- `accepted` must repeat the offered requirement exactly: `maxTimeoutSeconds` and every
+  `extra` entry the server declared are compared too; the reserved `extra` keys
+  `assetTransferMethod` and `paymentFlow` are accepted only with the implemented values
+  `eip3009` and `authorization`.
+- `ResourceInfo.mimeType` describes the resource (`text/html` for pages, omitted for other
+  page types) instead of echoing the client's `Accept` header; new optional `serviceName`,
+  `tags` and `iconUrl` from the site settings `service_name`, `service_tags`,
+  `service_icon_url` (validated against the limits of the specification).
+- Facilitator answers: `errorMessage` / `invalidMessage` are kept apart from the reason code,
+  `SettlementResponse.extensions` is passed through, answers with a result body count
+  whatever their HTTP status (CDP reports `settlement_pending` with 500), and the
+  specification codes `unexpected_verify_error` / `unexpected_settle_error` replace
+  `facilitator_unreachable`, `verification_failed`, `settlement_failed` and
+  `invalid_facilitator_response`.
+
+### Added
+
+- Coinbase Developer Platform facilitator: `facilitator_auth: cdp` adds
+  `Authorization: Bearer <JWT>` to every facilitator request, a two-minute token bound to
+  method and URL, signed with an ECDSA (ES256) or Ed25519 (EdDSA) CDP API key from
+  `facilitator_api_key_id` / `facilitator_api_key_secret` or the environment variables
+  `CDP_API_KEY_ID` / `CDP_API_KEY_SECRET` (`FacilitatorAuthentication`).
+- `PaymentVerifier::supported()` (`GET /supported`), `GatedPageFinder`,
+  `PaymentLogger::getRevenueByCurrency()` / `countByStatus()` / `status()`,
+  `PaywallConfiguration::getProblems()` and block explorer links for known networks.
+
+### Changed
+
+- Backend module rebuilt with native TYPO3 v14 components: **Content > x402 Paywall**
+  (path unchanged, `/module/web/x402-paywall`) is a module group with the submodules
+  **Dashboard** and **Simulator**, switched in the document header; no page tree.
+  - Dashboard: settled revenue per period and currency (amounts are no longer summed across
+    currencies or labelled USDC), a warning for pending settlements, every site with an
+    `x402_paywall` block and the mistakes that keep payments from working (for example a
+    mainnet network on the testnet-only x402.org facilitator, or CDP authentication without
+    a key), the latest attempts with status badge, payer and block explorer link, top pages.
+  - Simulator: scenarios with real targets of the selected site (its first paywalled page,
+    its first gated route), a payment with an invalid signature, and a facilitator
+    capabilities check with the site's credentials; every request and response with the
+    decoded `PAYMENT-REQUIRED`, `PAYMENT-SIGNATURE` and `PAYMENT-RESPONSE` headers. The
+    site's own host is allowed even when it resolves to a private address (local
+    development); other targets must be public. ES module with `AjaxRequest` and
+    `~labels`, rendered as text only.
+  - Route identifiers: `web_x402_paywall_dashboard`, `web_x402_paywall_simulator`,
+    `web_x402_paywall_simulator.run` replace `web_x402_paywall.simulator` and
+    `web_x402_paywall.runSimulation`. The module is offered in the live workspace only.
+- Page properties: clearer labels with descriptions, the fields appear as soon as the
+  toggle is switched on; the log status is a read-only select (settled, pending, failed).
+- Wallet paywall page: reads `PAYMENT-RESPONSE` and tells the payer to check the wallet
+  before paying again when a settlement is pending or in an unknown state.
+- Module labels live in `Resources/Private/Language/Modules/*.xlf` and
+  `locallang_mod.xlf` (translation domains `x402_paywall.modules.*`, `x402_paywall.mod`);
+  all XLIFF files in English and German with two-space indentation. Line-art module icon.
+- PHP 8.4 idioms: typed class constants, `array_find` / `array_any` / `array_all`,
+  first-class callables, readonly services; PHPStan level 8 with deprecation rules.
+- Dependencies: `firebase/php-jwt` ^7.1, `guzzlehttp/guzzle` ^7.15.2 || ^8.0,
+  `psr/http-client`, `psr/http-factory` declared; PHPStan ^2.2, PHPUnit ^13.3,
+  testing-framework ^9.7. CI: PHP 8.4 and 8.5 as required jobs, MariaDB 11.4,
+  `actions/checkout` v7.
+- Capabilities: `api.cdp.coinbase.com` and configurable facilitator hosts declared.
+
+### Removed
+
+- `PaywallDashboardController::simulatorAction()` / `runSimulationAction()` (now
+  `PaywallSimulatorController`), the template `Dashboard/Simulator.html` and the classic
+  script `Resources/Public/JavaScript/simulator.js`.
+- The obsolete TCA `ctrl` entries `delete => ''`, `readOnly`, `hideTable` and the composer
+  `app-dir` setting.
+
+### Upgrade
+
+No database update: `pending` is a new value of the existing `status` column. New site
+settings are optional. Clients that parsed `PAYMENT-REQUIRED` of a failed settlement read
+`PAYMENT-RESPONSE` instead.
+
 ## [1.3.0] - 2026-09-18
 
 ### Protocol
