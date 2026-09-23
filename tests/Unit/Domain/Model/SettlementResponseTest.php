@@ -43,15 +43,53 @@ final class SettlementResponseTest extends UnitTestCase
     }
 
     #[Test]
-    public function failuresCarryTheErrorReason(): void
+    public function failuresCarryTheErrorReasonAndMessage(): void
     {
         self::assertSame('invalid_transaction_state', SettlementResponse::fromArray(['success' => false, 'errorReason' => 'invalid_transaction_state'])->errorReason);
-        self::assertSame('boom', SettlementResponse::fromArray(['success' => 'no', 'message' => 'boom'])->errorReason);
-        self::assertSame('settlement_failed', SettlementResponse::fromArray([])->errorReason);
 
-        $failed = SettlementResponse::failed('facilitator_unreachable', 'eip155:84532');
+        $apiError = SettlementResponse::fromArray(['success' => 'no', 'errorType' => 'internal_server_error', 'errorMessage' => 'boom']);
+        self::assertSame('unexpected_settle_error', $apiError->errorReason);
+        self::assertSame('boom', $apiError->errorMessage);
+        self::assertSame('unexpected_settle_error', SettlementResponse::fromArray([])->errorReason);
+
+        $failed = SettlementResponse::failed('insufficient_funds', 'eip155:84532', errorMessage: 'Balance too low');
         self::assertFalse($failed->success);
-        self::assertSame(['success' => false, 'errorReason' => 'facilitator_unreachable', 'transaction' => '', 'network' => 'eip155:84532'], $failed->toArray());
+        self::assertFalse($failed->isPending());
+        self::assertSame(
+            ['success' => false, 'errorReason' => 'insufficient_funds', 'errorMessage' => 'Balance too low', 'transaction' => '', 'network' => 'eip155:84532'],
+            $failed->toArray(),
+        );
+    }
+
+    #[Test]
+    public function settlementPendingNeedsTheTransactionHash(): void
+    {
+        $pending = SettlementResponse::fromArray(['success' => false, 'errorReason' => 'settlement_pending', 'transaction' => '0xtx', 'network' => 'eip155:8453']);
+        $withoutHash = SettlementResponse::fromArray(['success' => false, 'errorReason' => 'settlement_pending', 'transaction' => '', 'network' => 'eip155:8453']);
+
+        self::assertTrue($pending->isSettlementPending());
+        self::assertTrue($pending->isPending());
+        self::assertFalse($withoutHash->isSettlementPending());
+        self::assertFalse($withoutHash->isPending());
+    }
+
+    #[Test]
+    public function unknownOutcomesArePendingButNotSentAsSettlementPending(): void
+    {
+        $unknown = SettlementResponse::outcomeUnknown('eip155:8453', '0xPayer', 'No answer');
+
+        self::assertTrue($unknown->isPending());
+        self::assertFalse($unknown->isSettlementPending());
+        self::assertSame('unexpected_settle_error', $unknown->toArray()['errorReason'] ?? '');
+        self::assertArrayNotHasKey('outcomeUnknown', $unknown->toArray());
+    }
+
+    #[Test]
+    public function extensionsArePassedThroughAsObject(): void
+    {
+        $settlement = SettlementResponse::fromArray(['success' => true, 'transaction' => '0xtx', 'network' => 'eip155:8453', 'extensions' => ['builder-code' => ['s' => ['abc']]]]);
+
+        self::assertSame('{"success":true,"transaction":"0xtx","network":"eip155:8453","extensions":{"builder-code":{"s":["abc"]}}}', (string)base64_decode($settlement->toHeaderValue(), true));
     }
 
     #[Test]

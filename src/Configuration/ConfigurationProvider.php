@@ -19,7 +19,7 @@ use Webconsulting\X402Paywall\Utility\Json;
 /**
  * Reads the "x402_paywall" block of a site configuration into a PaywallConfiguration.
  */
-final class ConfigurationProvider
+final readonly class ConfigurationProvider
 {
     /**
      * Configuration of the site the request was routed to; disabled defaults without a site.

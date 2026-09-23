@@ -15,14 +15,14 @@ namespace Webconsulting\X402Paywall\Event;
 /**
  * Dispatched after a payment was verified and settled by the facilitator and the content is served.
  */
-final class PaymentReceivedEvent
+final readonly class PaymentReceivedEvent
 {
     public function __construct(
-        public readonly string $requestUri,
-        public readonly string $price,
-        public readonly string $currency,
-        public readonly ?string $txHash,
-        public readonly string $network,
-        public readonly string $payer = '',
+        public string $requestUri,
+        public string $price,
+        public string $currency,
+        public ?string $txHash,
+        public string $network,
+        public string $payer = '',
     ) {}
 }

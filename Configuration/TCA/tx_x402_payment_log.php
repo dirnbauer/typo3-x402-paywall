@@ -18,11 +18,10 @@ return [
         'label_alt_force' => true,
         'tstamp' => 'tstamp',
         'crdate' => 'crdate',
-        'delete' => '',
         'default_sortby' => 'crdate DESC',
-        'iconfile' => 'EXT:x402_paywall/Resources/Public/Icons/module-x402-paywall.svg',
-        'readOnly' => false,
-        'hideTable' => false,
+        'typeicon_classes' => [
+            'default' => 'module-x402-paywall',
+        ],
         'rootLevel' => -1,
     ],
     'columns' => [
@@ -85,9 +84,14 @@ return [
         'status' => [
             'label' => 'LLL:EXT:x402_paywall/Resources/Private/Language/locallang_db.xlf:tx_x402_payment_log.status',
             'config' => [
-                'type' => 'input',
-                'size' => 15,
+                'type' => 'select',
+                'renderType' => 'selectSingle',
                 'readOnly' => true,
+                'items' => [
+                    ['label' => 'LLL:EXT:x402_paywall/Resources/Private/Language/locallang_db.xlf:tx_x402_payment_log.status.settled', 'value' => 'settled'],
+                    ['label' => 'LLL:EXT:x402_paywall/Resources/Private/Language/locallang_db.xlf:tx_x402_payment_log.status.pending', 'value' => 'pending'],
+                    ['label' => 'LLL:EXT:x402_paywall/Resources/Private/Language/locallang_db.xlf:tx_x402_payment_log.status.failed', 'value' => 'failed'],
+                ],
             ],
         ],
         'tx_hash' => [

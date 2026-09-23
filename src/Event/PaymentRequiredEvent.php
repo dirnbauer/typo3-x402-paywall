@@ -15,12 +15,12 @@ namespace Webconsulting\X402Paywall\Event;
 /**
  * Dispatched right before a 402 Payment Required response is returned for a gated resource.
  */
-final class PaymentRequiredEvent
+final readonly class PaymentRequiredEvent
 {
     public function __construct(
-        public readonly string $requestUri,
-        public readonly string $price,
-        public readonly string $currency,
-        public readonly string $network = '',
+        public string $requestUri,
+        public string $price,
+        public string $currency,
+        public string $network = '',
     ) {}
 }

@@ -34,25 +34,26 @@ use Webconsulting\X402Paywall\Service\PaymentVerifier;
 use Webconsulting\X402Paywall\Service\RouteGateResolver;
 
 /**
- * PSR-15 middleware implementing the x402 v2 HTTP transport (specification v2.0, 2025-12-09).
+ * PSR-15 middleware implementing the x402 v2 HTTP transport.
  *
  * 1. Gated resource without PAYMENT-SIGNATURE -> 402 + PAYMENT-REQUIRED header (base64 PaymentRequired)
  * 2. PAYMENT-SIGNATURE present                 -> decode PaymentPayload, match it, POST /verify
  * 3. Valid payment                             -> run the request, POST /settle, add PAYMENT-RESPONSE
+ * 4. Settlement failed or pending              -> 402 + PAYMENT-RESPONSE (success: false)
  *
  * With legacy_v1 the X-PAYMENT request header and v1 payloads are accepted as well (see X402V1).
  */
-final class X402PaywallMiddleware implements MiddlewareInterface
+final readonly class X402PaywallMiddleware implements MiddlewareInterface
 {
     public function __construct(
-        private readonly ConfigurationProvider $configProvider,
-        private readonly RouteGateResolver $gateResolver,
-        private readonly PaymentVerifier $verifier,
-        private readonly PaymentLogger $paymentLogger,
-        private readonly ContentTypeResolver $contentTypeResolver,
-        private readonly PaymentRequiredResponseFactory $responseFactory,
-        private readonly EventDispatcherInterface $eventDispatcher,
-        private readonly LoggerInterface $logger,
+        private ConfigurationProvider $configProvider,
+        private RouteGateResolver $gateResolver,
+        private PaymentVerifier $verifier,
+        private PaymentLogger $paymentLogger,
+        private ContentTypeResolver $contentTypeResolver,
+        private PaymentRequiredResponseFactory $responseFactory,
+        private EventDispatcherInterface $eventDispatcher,
+        private LoggerInterface $logger,
     ) {}
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
@@ -69,7 +70,10 @@ final class X402PaywallMiddleware implements MiddlewareInterface
             resource: new ResourceInfo(
                 url: $requestUri,
                 description: $this->gateResolver->getContentDescription($request),
-                mimeType: $this->responseFactory->isBrowserRequest($request) ? 'text/html' : 'application/json',
+                mimeType: $this->gateResolver->getMimeType($request),
+                serviceName: $config->getServiceName(),
+                tags: $config->getServiceTags(),
+                iconUrl: $config->getServiceIconUrl(),
             ),
             accepts: [$requirement],
         );
@@ -130,9 +134,14 @@ final class X402PaywallMiddleware implements MiddlewareInterface
         $this->paymentLogger->logPayment($request, $pageUid, $content['type'], $content['uid'], $price, $config->currency, $settlement);
 
         if (!$settlement->success) {
-            $this->logger->warning('x402: settlement failed for {uri}: {error}', ['uri' => $requestUri, 'error' => $settlement->errorReason]);
+            $this->logger->warning('x402: settlement {status} for {uri}: {error}', [
+                'status' => PaymentLogger::status($settlement),
+                'uri' => $requestUri,
+                'error' => $settlement->errorReason,
+                'transaction' => $settlement->transaction,
+            ]);
 
-            return $this->responseFactory->create($request, $paymentRequired, $config, $settlement->errorReason);
+            return $this->responseFactory->createSettlementFailure($request, $paymentRequired, $config, $settlement, $legacy);
         }
 
         $this->eventDispatcher->dispatch(new PaymentReceivedEvent(

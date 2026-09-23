@@ -1,0 +1,4 @@
+"tx_x402_payment_log",,,,,,,,,,,,,
+,"uid","pid","tstamp","crdate","page_uid","content_type","content_uid","amount","currency","network","tx_hash","payer_address","status"
+,5,2,1700345600,1700345600,2,"page",2,"0.05","USDC","eip155:84532","0xddd","0xPayer4","pending"
+,6,2,1700432000,1700432000,2,"page",2,"2","EURC","eip155:8453","0xeee","0xPayer5","settled"

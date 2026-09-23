@@ -25,20 +25,22 @@ use Webconsulting\X402Paywall\Utility\ScalarValue;
 /**
  * Writes and reads the payment log (tx_x402_payment_log) used by the dashboard and the MCP tools.
  */
-final class PaymentLogger
+final readonly class PaymentLogger
 {
-    public const TABLE = 'tx_x402_payment_log';
+    public const string TABLE = 'tx_x402_payment_log';
 
-    public const STATUS_SETTLED = 'settled';
-    public const STATUS_FAILED = 'failed';
+    public const string STATUS_SETTLED = 'settled';
+    /** Broadcast but unconfirmed, or no answer from the facilitator: check the transaction on chain. */
+    public const string STATUS_PENDING = 'pending';
+    public const string STATUS_FAILED = 'failed';
 
     public function __construct(
-        private readonly ConnectionPool $connectionPool,
-        private readonly HashService $hashService,
+        private ConnectionPool $connectionPool,
+        private HashService $hashService,
     ) {}
 
     /**
-     * Records a settlement attempt (settled or failed) for the paid resource.
+     * Records a settlement attempt (settled, pending or failed) for the paid resource.
      *
      * @param string $contentType Record type behind the page ("page", "news", ...), see ContentTypeResolver
      * @param int $contentUid Record UID; 0 falls back to the page UID
@@ -68,10 +70,70 @@ final class PaymentLogger
             'tx_hash' => $settlement->transaction,
             'payer_address' => $settlement->payer,
             'facilitator_response' => $settlement->raw !== [] ? Json::encode($settlement->raw) : '',
-            'status' => $settlement->success ? self::STATUS_SETTLED : self::STATUS_FAILED,
+            'status' => self::status($settlement),
             'user_agent' => substr($request->getHeaderLine('User-Agent'), 0, 500),
             'ip_hash' => $this->hashIpAddress(ScalarValue::string($request->getServerParams()['REMOTE_ADDR'] ?? null)),
         ]);
+    }
+
+    public static function status(SettlementResponse $settlement): string
+    {
+        return match (true) {
+            $settlement->success => self::STATUS_SETTLED,
+            $settlement->isPending() => self::STATUS_PENDING,
+            default => self::STATUS_FAILED,
+        };
+    }
+
+    /**
+     * Settled revenue per currency (a site may change its asset, so amounts are never summed across currencies).
+     *
+     * @return list<array{currency: string, transactions: int, revenue: string}> Highest revenue first
+     */
+    public function getRevenueByCurrency(int $since = 0): array
+    {
+        $rows = $this->settledSince($since)
+            ->select('currency')
+            ->addSelectLiteral('COUNT(*) AS transactions')
+            ->addSelectLiteral('COALESCE(SUM(CAST(amount AS DECIMAL(20,6))), 0) AS revenue')
+            ->groupBy('currency')
+            ->orderBy('revenue', 'DESC')
+            ->executeQuery()
+            ->fetchAllAssociative();
+
+        return array_map(static fn(array $row): array => [
+            'currency' => ScalarValue::string($row['currency'] ?? null),
+            'transactions' => ScalarValue::int($row['transactions'] ?? null),
+            'revenue' => self::formatAmount(ScalarValue::float($row['revenue'] ?? null)),
+        ], $rows);
+    }
+
+    /**
+     * Number of logged settlement attempts per status.
+     *
+     * @return array{settled: int, pending: int, failed: int}
+     */
+    public function countByStatus(int $since = 0): array
+    {
+        $queryBuilder = $this->connectionPool->getQueryBuilderForTable(self::TABLE);
+        $queryBuilder
+            ->select('status')
+            ->addSelectLiteral('COUNT(*) AS attempts')
+            ->from(self::TABLE)
+            ->groupBy('status');
+        if ($since > 0) {
+            $queryBuilder->where($queryBuilder->expr()->gte('crdate', $queryBuilder->createNamedParameter($since, ParameterType::INTEGER)));
+        }
+
+        $counts = [self::STATUS_SETTLED => 0, self::STATUS_PENDING => 0, self::STATUS_FAILED => 0];
+        foreach ($queryBuilder->executeQuery()->fetchAllAssociative() as $row) {
+            $status = ScalarValue::string($row['status'] ?? null);
+            if (array_key_exists($status, $counts)) {
+                $counts[$status] = ScalarValue::int($row['attempts'] ?? null);
+            }
+        }
+
+        return $counts;
     }
 
     /**
@@ -136,6 +198,16 @@ final class PaymentLogger
         }
 
         return $queryBuilder;
+    }
+
+    /**
+     * "12.5" for 12.500000: at most six decimals (USDC precision), no trailing zeros.
+     */
+    private static function formatAmount(float $amount): string
+    {
+        $formatted = rtrim(rtrim(number_format($amount, 6, '.', ''), '0'), '.');
+
+        return $formatted === '' || $formatted === '-0' ? '0' : $formatted;
     }
 
     private function hashIpAddress(string $ipAddress): string

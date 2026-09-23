@@ -25,15 +25,25 @@ final class HeaderDocument
      */
     public static function decode(string $base64, string $headerName): array
     {
+        try {
+            return Json::decodeObject(self::json($base64, $headerName));
+        } catch (\JsonException $exception) {
+            throw new \InvalidArgumentException($headerName . ' is not valid JSON', 1757600002, $exception);
+        }
+    }
+
+    /**
+     * The JSON text inside the header value.
+     *
+     * @throws \InvalidArgumentException when the value is not base64
+     */
+    public static function json(string $base64, string $headerName): string
+    {
         $decoded = base64_decode(trim($base64), true);
         if ($decoded === false) {
             throw new \InvalidArgumentException($headerName . ' is not valid base64', 1757600001);
         }
 
-        try {
-            return Json::decodeObject($decoded);
-        } catch (\JsonException $exception) {
-            throw new \InvalidArgumentException($headerName . ' is not valid JSON', 1757600002, $exception);
-        }
+        return $decoded;
     }
 }

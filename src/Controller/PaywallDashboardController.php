@@ -14,217 +14,165 @@ namespace Webconsulting\X402Paywall\Controller;
 
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use TYPO3\CMS\Backend\Attribute\AsController;
+use TYPO3\CMS\Backend\Routing\UriBuilder;
 use TYPO3\CMS\Backend\Template\ModuleTemplateFactory;
-use TYPO3\CMS\Core\Http\JsonResponse;
-use TYPO3\CMS\Core\Http\RequestFactory;
-use TYPO3\CMS\Core\Localization\LanguageServiceFactory;
+use TYPO3\CMS\Backend\Utility\BackendUtility;
 use TYPO3\CMS\Core\Site\Entity\Site;
 use TYPO3\CMS\Core\Site\SiteFinder;
 use Webconsulting\X402Paywall\Configuration\ConfigurationProvider;
 use Webconsulting\X402Paywall\Configuration\PaywallConfiguration;
-use Webconsulting\X402Paywall\Domain\Model\PaymentRequired;
-use Webconsulting\X402Paywall\Http\X402Header;
 use Webconsulting\X402Paywall\Service\PaymentLogger;
 use Webconsulting\X402Paywall\Service\ReportingPeriod;
-use Webconsulting\X402Paywall\Utility\HttpUrl;
-use Webconsulting\X402Paywall\Utility\Json;
 use Webconsulting\X402Paywall\Utility\ScalarValue;
 
 /**
- * Backend module "Web > x402 Paywall": revenue dashboard and request simulator.
+ * "x402 Paywall > Dashboard": revenue, settlement states, recent payments and the paywall
+ * configuration of every site, with the mistakes that keep payments from working.
  */
+#[AsController]
 final readonly class PaywallDashboardController
 {
-    private const LANGUAGE_FILE = 'LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:';
-    private const PROBE_TIMEOUT = 10;
+    public const string ROUTE = 'web_x402_paywall_dashboard';
 
-    /**
-     * Simulator scenarios: id => [path below the site base, send a mock PAYMENT-SIGNATURE].
-     *
-     * @var array<string, array{0: string, 1: bool}>
-     */
-    private const SCENARIOS = [
-        'plain_get' => ['/premium-content', false],
-        'mock_signature' => ['/premium-content', true],
-        'news_detail' => ['/news/detail?tx_news_pi1[news]=1&tx_news_pi1[action]=detail', false],
-        'api_route' => ['/api/v1/content/42', false],
-    ];
+    private const int RECENT_TRANSACTIONS = 20;
+    private const int TOP_PAGES = 10;
 
     public function __construct(
         private ModuleTemplateFactory $moduleTemplateFactory,
         private PaymentLogger $paymentLogger,
-        private RequestFactory $requestFactory,
         private SiteFinder $siteFinder,
         private ConfigurationProvider $configurationProvider,
-        private LanguageServiceFactory $languageServiceFactory,
+        private UriBuilder $uriBuilder,
+        private ModuleLabels $labels,
     ) {}
 
     public function mainAction(ServerRequestInterface $request): ResponseInterface
     {
+        $title = $this->labels->get('dashboard.title');
+        $view = $this->moduleTemplateFactory->create($request);
+        $view->setTitle($title);
+        $view->makeDocHeaderModuleMenu();
+        $view->getDocHeaderComponent()->setShortcutContext(self::ROUTE, $title);
+
         $periods = [];
         foreach (ReportingPeriod::cases() as $period) {
             $periods[] = [
-                'label' => self::LANGUAGE_FILE . $period->label(),
-                'stats' => $this->paymentLogger->getStats($period->since()),
+                'label' => $this->labels->get($period->label()),
+                'revenue' => $this->paymentLogger->getRevenueByCurrency($period->since()),
             ];
         }
 
-        $moduleTemplate = $this->moduleTemplateFactory->create($request);
-        $moduleTemplate->setTitle($this->translate('mlang_labels_tablabel'));
-        $moduleTemplate->assignMultiple([
+        $view->assignMultiple([
             'periods' => $periods,
-            'topPages' => $this->paymentLogger->getTopPages(10, ReportingPeriod::Last30Days->since()),
-            'recentTransactions' => $this->paymentLogger->getRecentTransactions(20),
+            'statusCounts' => $this->paymentLogger->countByStatus(ReportingPeriod::Last30Days->since()),
+            'sites' => $this->siteSummaries(),
+            'recentTransactions' => array_map($this->transaction(...), $this->paymentLogger->getRecentTransactions(self::RECENT_TRANSACTIONS)),
+            'topPages' => array_map($this->topPage(...), $this->paymentLogger->getTopPages(self::TOP_PAGES, ReportingPeriod::Last30Days->since())),
+            'simulatorUri' => (string)$this->uriBuilder->buildUriFromRoute(PaywallSimulatorController::ROUTE),
+            'dateFormat' => ScalarValue::string($GLOBALS['TYPO3_CONF_VARS']['SYS']['ddmmyy'] ?? null, 'd-m-y')
+                . ' ' . ScalarValue::string($GLOBALS['TYPO3_CONF_VARS']['SYS']['hhmm'] ?? null, 'H:i'),
         ]);
 
-        return $moduleTemplate->renderResponse('Dashboard/Main');
-    }
-
-    public function simulatorAction(ServerRequestInterface $request): ResponseInterface
-    {
-        $site = $this->firstSite();
-        $baseUrl = $site instanceof Site ? rtrim((string)$site->getBase(), '/') : 'https://your-typo3.local';
-        $config = $site instanceof Site ? $this->configurationProvider->getForSite($site) : new PaywallConfiguration();
-
-        $scenarios = [];
-        foreach (self::SCENARIOS as $id => [$path, $mockSignature]) {
-            $scenarios[] = $this->scenario($id, $baseUrl . $path, $mockSignature);
-        }
-        $scenarios[] = $this->scenario('facilitator_check', rtrim($config->facilitatorUrl, '/') . '/supported', false);
-
-        $moduleTemplate = $this->moduleTemplateFactory->create($request);
-        $moduleTemplate->setTitle($this->translate('simulator.title'));
-        $moduleTemplate->assign('scenarios', $scenarios);
-
-        return $moduleTemplate->renderResponse('Dashboard/Simulator');
+        return $view->renderResponse('Dashboard/Main');
     }
 
     /**
-     * AJAX: GET a public URL and report status, headers, body and the decoded PAYMENT-REQUIRED header.
-     * With signature=mock a 402 is answered like a client would: a syntactically valid PaymentPayload for
-     * the offered requirement with a dummy signature, which the facilitator must reject.
+     * Sites with an "x402_paywall" block in their configuration.
+     *
+     * @return list<array<string, mixed>>
      */
-    public function runSimulationAction(ServerRequestInterface $request): ResponseInterface
+    private function siteSummaries(): array
     {
-        try {
-            $body = Json::decodeObject((string)$request->getBody());
-        } catch (\JsonException) {
-            return $this->jsonError('simulator.error.invalid_json');
-        }
-
-        $url = ScalarValue::string($body['url'] ?? null);
-        if ($url === '') {
-            return $this->jsonError('simulator.error.missing_url');
-        }
-        if (!HttpUrl::isAllowedOutboundHttpUrl($url)) {
-            return $this->jsonError('simulator.error.disallowed_url');
-        }
-
-        $headers = [
-            'Accept' => 'application/json, text/html, */*',
-            'User-Agent' => 'x402-simulator/TYPO3-backend',
-        ];
-
-        try {
-            $response = $this->requestFactory->request($url, 'GET', $this->requestOptions($headers));
-            $offered = $this->decodePaymentRequired($response->getHeaderLine(X402Header::PAYMENT_REQUIRED));
-
-            if (ScalarValue::string($body['signature'] ?? null) === 'mock' && $offered instanceof PaymentRequired) {
-                $headers[X402Header::PAYMENT_SIGNATURE] = self::mockPaymentSignature($offered);
-                $response = $this->requestFactory->request($url, 'GET', $this->requestOptions($headers));
-                $offered = $this->decodePaymentRequired($response->getHeaderLine(X402Header::PAYMENT_REQUIRED)) ?? $offered;
+        $summaries = [];
+        foreach ($this->siteFinder->getAllSites() as $site) {
+            if (!is_array($site->getConfiguration()['x402_paywall'] ?? null)) {
+                continue;
             }
-        } catch (\Throwable $exception) {
-            return new JsonResponse(['error' => $exception->getMessage()]);
+            $config = $this->configurationProvider->getForSite($site);
+            $summaries[] = [
+                'identifier' => $site->getIdentifier(),
+                'title' => self::siteTitle($site),
+                'base' => (string)$site->getBase(),
+                'enabled' => $config->enabled,
+                'active' => $config->isValid(),
+                'network' => $config->getNetworkLabel(),
+                'caip2' => $config->getCaip2NetworkId(),
+                'price' => $config->defaultPrice,
+                'currency' => $config->currency,
+                'wallet' => $config->walletAddress,
+                'facilitatorHost' => ScalarValue::string(parse_url($config->facilitatorUrl, PHP_URL_HOST), $config->facilitatorUrl),
+                'cdp' => $config->usesCdpAuthentication(),
+                'legacyV1' => $config->legacyV1,
+                'problems' => array_map(fn(string $problem): string => $this->labels->get('problem.' . $problem), $config->getProblems()),
+                'simulatorUri' => (string)$this->uriBuilder->buildUriFromRoute(PaywallSimulatorController::ROUTE, ['site' => $site->getIdentifier()]),
+            ];
         }
 
-        return new JsonResponse([
-            'status' => $response->getStatusCode(),
-            'headers' => array_map(static fn(array $values): string => implode(', ', $values), $response->getHeaders()),
-            'body' => substr((string)$response->getBody(), 0, 2000),
-            'decodedRequirement' => $offered?->toArray(),
-        ]);
+        return $summaries;
     }
 
     /**
-     * @param array<string, string> $headers
+     * @param array<string, mixed> $row
      * @return array<string, mixed>
      */
-    private function requestOptions(array $headers): array
+    private function transaction(array $row): array
     {
-        return ['headers' => $headers, 'timeout' => self::PROBE_TIMEOUT, 'allow_redirects' => false, 'http_errors' => false];
-    }
+        $network = ScalarValue::string($row['network'] ?? null);
+        $transaction = ScalarValue::string($row['tx_hash'] ?? null);
+        $payer = ScalarValue::string($row['payer_address'] ?? null);
+        $pageUid = ScalarValue::int($row['page_uid'] ?? null);
 
-    private function decodePaymentRequired(string $headerValue): ?PaymentRequired
-    {
-        if ($headerValue === '') {
-            return null;
-        }
-
-        try {
-            return PaymentRequired::fromHeaderValue($headerValue);
-        } catch (\InvalidArgumentException) {
-            return null;
-        }
-    }
-
-    /**
-     * x402 v2 PaymentPayload (exact/EVM, EIP-3009) for the first offered requirement with a dummy signature.
-     */
-    private static function mockPaymentSignature(PaymentRequired $offered): string
-    {
-        $requirement = $offered->first();
-        $now = time();
-
-        return base64_encode(Json::encode([
-            'x402Version' => PaymentRequired::X402_VERSION,
-            'resource' => $offered->resource->toArray(),
-            'accepted' => $requirement->toArray(),
-            'payload' => [
-                'signature' => '0x' . str_repeat('ab', 65),
-                'authorization' => [
-                    'from' => '0x0000000000000000000000000000000000000001',
-                    'to' => $requirement->payTo,
-                    'value' => $requirement->amount,
-                    'validAfter' => (string)($now - 60),
-                    'validBefore' => (string)($now + $requirement->maxTimeoutSeconds),
-                    'nonce' => '0x' . str_repeat('00', 32),
-                ],
-            ],
-        ]));
-    }
-
-    /**
-     * @return array{id: string, label: string, url: string, signature: string, description: string}
-     */
-    private function scenario(string $id, string $url, bool $mockSignature): array
-    {
         return [
-            'id' => $id,
-            'label' => $this->translate('simulator.scenario.' . $id . '.label'),
-            'url' => $url,
-            'signature' => $mockSignature ? 'mock' : '',
-            'description' => $this->translate('simulator.scenario.' . $id . '.description'),
+            'uid' => ScalarValue::int($row['uid'] ?? null),
+            'time' => ScalarValue::int($row['crdate'] ?? null),
+            'pageUid' => $pageUid,
+            'pageTitle' => self::pageTitle($pageUid),
+            'amount' => ScalarValue::string($row['amount'] ?? null),
+            'currency' => ScalarValue::string($row['currency'] ?? null),
+            'network' => PaywallConfiguration::networkLabel($network),
+            'transaction' => $transaction,
+            'transactionShort' => self::shorten($transaction),
+            'transactionUrl' => PaywallConfiguration::transactionUrl($network, $transaction),
+            'payer' => $payer,
+            'payerShort' => self::shorten($payer),
+            'status' => ScalarValue::string($row['status'] ?? null),
         ];
     }
 
-    private function firstSite(): ?Site
+    /**
+     * @param array<string, mixed> $row
+     * @return array{uid: int, title: string, transactions: int, revenue: string}
+     */
+    private function topPage(array $row): array
     {
-        $sites = $this->siteFinder->getAllSites();
-        $site = reset($sites);
+        $uid = ScalarValue::int($row['page_uid'] ?? null);
 
-        return $site instanceof Site ? $site : null;
+        return [
+            'uid' => $uid,
+            'title' => self::pageTitle($uid),
+            'transactions' => ScalarValue::int($row['transactions'] ?? null),
+            'revenue' => rtrim(rtrim(number_format(ScalarValue::float($row['revenue'] ?? null), 6, '.', ''), '0'), '.'),
+        ];
     }
 
-    private function jsonError(string $labelKey): JsonResponse
+    private static function siteTitle(Site $site): string
     {
-        return new JsonResponse(['error' => $this->translate($labelKey)], 400);
+        $websiteTitle = ScalarValue::string($site->getConfiguration()['websiteTitle'] ?? null);
+
+        return $websiteTitle !== '' ? $websiteTitle : self::pageTitle($site->getRootPageId());
     }
 
-    private function translate(string $key): string
+    private static function pageTitle(int $uid): string
     {
-        $label = $this->languageServiceFactory->createFromUserPreferences($GLOBALS['BE_USER'] ?? null)->sL(self::LANGUAGE_FILE . $key);
+        return $uid > 0 ? ScalarValue::string(BackendUtility::getRecord('pages', $uid, 'title')['title'] ?? null) : '';
+    }
 
-        return $label !== '' ? $label : $key;
+    /**
+     * "0x1234…cdef" for long hashes and addresses.
+     */
+    private static function shorten(string $value): string
+    {
+        return strlen($value) > 14 ? substr($value, 0, 6) . '…' . substr($value, -4) : $value;
     }
 }

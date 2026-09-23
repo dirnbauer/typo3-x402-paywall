@@ -1,133 +1,222 @@
-<html xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
-      xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
-      data-namespace-typo3-fluid="true">
+<html
+  xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
+  xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+  xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+  data-namespace-typo3-fluid="true"
+>
 
 <f:layout name="Module" />
 
 <f:section name="Content">
+  <h1><f:translate key="dashboard.title" domain="x402_paywall.mod" /></h1>
+  <p><f:translate key="dashboard.description" domain="x402_paywall.mod" /></p>
 
-<div class="x402-dashboard">
+  <f:if condition="{statusCounts.pending}">
+    <f:be.infobox
+      title="{f:translate(key: 'dashboard.pending.title', domain: 'x402_paywall.mod', arguments: {count: statusCounts.pending})}"
+      state="{f:constant(name: 'TYPO3\CMS\Core\Type\ContextualFeedbackSeverity::WARNING')}"
+    >
+      <f:translate key="dashboard.pending.description" domain="x402_paywall.mod" />
+    </f:be.infobox>
+  </f:if>
 
-    <div class="row mb-4">
-        <f:for each="{periods}" as="period">
-            <div class="col-md-3">
-                <div class="card card-body">
-                    <h6 class="text-muted"><f:translate key="{period.label}" /></h6>
-                    <h3 class="mb-0">{period.stats.total_revenue} USDC</h3>
-                    <small class="text-muted">{period.stats.total_transactions} <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.transactions" /></small>
-                </div>
-            </div>
-        </f:for>
-    </div>
-
-    <div class="row">
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.top_pages" /></h5>
-                </div>
-                <div class="card-body p-0">
-                    <table class="table table-striped mb-0">
-                        <thead>
-                            <tr>
-                                <th><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.page_uid" /></th>
-                                <th class="text-end"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.transactions" /></th>
-                                <th class="text-end"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.revenue_usdc" /></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <f:for each="{topPages}" as="page">
-                                <tr>
-                                    <td>
-                                        <be:link.editRecord uid="{page.page_uid}" table="pages">
-                                            #{page.page_uid}
-                                        </be:link.editRecord>
-                                    </td>
-                                    <td class="text-end">{page.transactions}</td>
-                                    <td class="text-end">{page.revenue}</td>
-                                </tr>
-                            </f:for>
-                            <f:if condition="{topPages -> f:count()} == 0">
-                                <tr>
-                                    <td colspan="3" class="text-center text-muted py-4">
-                                        <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.no_payments" />
-                                    </td>
-                                </tr>
-                            </f:if>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+  <h2><f:translate key="dashboard.revenue" domain="x402_paywall.mod" /></h2>
+  <div class="card-container">
+    <f:for each="{periods}" as="period">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-body">
+            <h3 class="card-title">{period.label}</h3>
+          </div>
         </div>
-
-        <div class="col-md-6">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.recent_transactions" /></h5>
-                </div>
-                <div class="card-body p-0">
-                    <table class="table table-striped mb-0">
-                        <thead>
-                            <tr>
-                                <th><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.time" /></th>
-                                <th><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.page" /></th>
-                                <th class="text-end"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.amount" /></th>
-                                <th><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.network" /></th>
-                                <th><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.status" /></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <f:for each="{recentTransactions}" as="tx">
-                                <tr>
-                                    <td>
-                                        <f:format.date format="d.m.Y H:i">{tx.crdate}</f:format.date>
-                                    </td>
-                                    <td>#{tx.page_uid}</td>
-                                    <td class="text-end">{tx.amount} {tx.currency}</td>
-                                    <td><span class="badge badge-secondary">{tx.network}</span></td>
-                                    <td>
-                                        <f:if condition="{tx.status} == 'settled'">
-                                            <f:then><span class="badge badge-success"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.status.settled" /></span></f:then>
-                                            <f:else><span class="badge badge-warning">{tx.status}</span></f:else>
-                                        </f:if>
-                                    </td>
-                                </tr>
-                            </f:for>
-                            <f:if condition="{recentTransactions -> f:count()} == 0">
-                                <tr>
-                                    <td colspan="5" class="text-center text-muted py-4">
-                                        <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.no_transactions" />
-                                    </td>
-                                </tr>
-                            </f:if>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+        <div class="card-body">
+          <f:for each="{period.revenue}" as="line" iteration="lineIterator">
+            <p class="h3 mb-0">{line.revenue} {line.currency}</p>
+            <p class="text-variant{f:if(condition: lineIterator.isLast, else: ' mb-2', then: ' mb-0')}">
+              <f:translate key="dashboard.payments" domain="x402_paywall.mod" arguments="{count: line.transactions}" />
+            </p>
+          </f:for>
+          <f:if condition="{period.revenue}">
+            <f:else>
+              <p class="h3 mb-0">0</p>
+              <p class="text-variant mb-0"><f:translate key="dashboard.payments" domain="x402_paywall.mod" arguments="{count: 0}" /></p>
+            </f:else>
+          </f:if>
         </div>
+      </div>
+    </f:for>
+  </div>
+
+  <h2><f:translate key="dashboard.sites" domain="x402_paywall.mod" /></h2>
+  <f:if condition="{sites}">
+    <f:then>
+      <div class="table-fit">
+        <table class="table table-striped table-hover">
+          <caption class="visually-hidden"><f:translate key="dashboard.sites.caption" domain="x402_paywall.mod" /></caption>
+          <thead>
+            <tr>
+              <th scope="col"><f:translate key="dashboard.sites.site" domain="x402_paywall.mod" /></th>
+              <th scope="col"><f:translate key="dashboard.sites.state" domain="x402_paywall.mod" /></th>
+              <th scope="col"><f:translate key="dashboard.sites.network" domain="x402_paywall.mod" /></th>
+              <th scope="col"><f:translate key="dashboard.sites.price" domain="x402_paywall.mod" /></th>
+              <th scope="col"><f:translate key="dashboard.sites.facilitator" domain="x402_paywall.mod" /></th>
+              <th scope="col" class="col-control"><span class="visually-hidden"><f:translate key="dashboard.sites.actions" domain="x402_paywall.mod" /></span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <f:for each="{sites}" as="site">
+              <tr>
+                <td>
+                  <strong>{site.title}</strong><br>
+                  <code>{site.identifier}</code>
+                </td>
+                <td>
+                  <f:if condition="{site.active} && {site.problems}">
+                    <f:then><span class="badge badge-warning"><f:translate key="dashboard.sites.attention" domain="x402_paywall.mod" /></span></f:then>
+                    <f:else if="{site.active}"><span class="badge badge-success"><f:translate key="dashboard.sites.active" domain="x402_paywall.mod" /></span></f:else>
+                    <f:else if="{site.enabled}"><span class="badge badge-danger"><f:translate key="dashboard.sites.incomplete" domain="x402_paywall.mod" /></span></f:else>
+                    <f:else><span class="badge badge-default"><f:translate key="dashboard.sites.disabled" domain="x402_paywall.mod" /></span></f:else>
+                  </f:if>
+                  <f:if condition="{site.legacyV1}">
+                    <span class="badge badge-info"><f:translate key="dashboard.sites.legacy" domain="x402_paywall.mod" /></span>
+                  </f:if>
+                  <f:if condition="{site.problems}">
+                    <ul class="mb-0 mt-2 ps-3">
+                      <f:for each="{site.problems}" as="problem"><li>{problem}</li></f:for>
+                    </ul>
+                  </f:if>
+                </td>
+                <td>
+                  {site.network}<br>
+                  <code>{site.caip2}</code>
+                </td>
+                <td>{site.price} {site.currency}</td>
+                <td>
+                  {site.facilitatorHost}
+                  <f:if condition="{site.cdp}"><span class="badge badge-info"><f:translate key="dashboard.sites.cdp" domain="x402_paywall.mod" /></span></f:if>
+                </td>
+                <td class="col-control">
+                  <a href="{site.simulatorUri}" class="btn btn-default btn-sm">
+                    <core:icon identifier="actions-play" size="small" />
+                    <f:translate key="dashboard.sites.test" domain="x402_paywall.mod" />
+                  </a>
+                </td>
+              </tr>
+            </f:for>
+          </tbody>
+        </table>
+      </div>
+    </f:then>
+    <f:else>
+      <f:be.infobox
+        title="{f:translate(key: 'dashboard.sites.empty.title', domain: 'x402_paywall.mod')}"
+        state="{f:constant(name: 'TYPO3\CMS\Core\Type\ContextualFeedbackSeverity::INFO')}"
+      >
+        <p><f:translate key="dashboard.sites.empty.description" domain="x402_paywall.mod" /></p>
+        <pre class="mb-0"><code>x402_paywall:
+  enabled: true
+  wallet_address: '0xYourReceivingWallet'
+  network: base-sepolia
+  default_price: '0.01'</code></pre>
+      </f:be.infobox>
+    </f:else>
+  </f:if>
+
+  <h2><f:translate key="dashboard.transactions" domain="x402_paywall.mod" /></h2>
+  <f:if condition="{recentTransactions}">
+    <f:then>
+      <div class="table-fit">
+        <table class="table table-striped table-hover">
+          <caption class="visually-hidden"><f:translate key="dashboard.transactions.caption" domain="x402_paywall.mod" /></caption>
+          <thead>
+            <tr>
+              <th scope="col"><f:translate key="dashboard.transactions.time" domain="x402_paywall.mod" /></th>
+              <th scope="col"><f:translate key="dashboard.transactions.page" domain="x402_paywall.mod" /></th>
+              <th scope="col" class="text-end"><f:translate key="dashboard.transactions.amount" domain="x402_paywall.mod" /></th>
+              <th scope="col"><f:translate key="dashboard.transactions.network" domain="x402_paywall.mod" /></th>
+              <th scope="col"><f:translate key="dashboard.transactions.payer" domain="x402_paywall.mod" /></th>
+              <th scope="col"><f:translate key="dashboard.transactions.transaction" domain="x402_paywall.mod" /></th>
+              <th scope="col"><f:translate key="dashboard.transactions.status" domain="x402_paywall.mod" /></th>
+            </tr>
+          </thead>
+          <tbody>
+            <f:for each="{recentTransactions}" as="transaction">
+              <tr>
+                <td><f:format.date format="{dateFormat}">{transaction.time}</f:format.date></td>
+                <td>
+                  <f:if condition="{transaction.pageUid}">
+                    <f:then>
+                      <be:link.editRecord uid="{transaction.pageUid}" table="pages" title="{f:translate(key: 'dashboard.transactions.edit_page', domain: 'x402_paywall.mod')}">
+                        {transaction.pageTitle -> f:or(alternative: '[{transaction.pageUid}]')}
+                      </be:link.editRecord>
+                    </f:then>
+                    <f:else>–</f:else>
+                  </f:if>
+                </td>
+                <td class="text-end text-nowrap">{transaction.amount} {transaction.currency}</td>
+                <td>{transaction.network}</td>
+                <td><f:if condition="{transaction.payer}"><f:then><code title="{transaction.payer}">{transaction.payerShort}</code></f:then><f:else>–</f:else></f:if></td>
+                <td>
+                  <f:if condition="{transaction.transactionUrl}">
+                    <f:then>
+                      <a href="{transaction.transactionUrl}" target="_blank" rel="noopener noreferrer" title="{transaction.transaction}"><code>{transaction.transactionShort}</code></a>
+                    </f:then>
+                    <f:else if="{transaction.transaction}"><code title="{transaction.transaction}">{transaction.transactionShort}</code></f:else>
+                    <f:else>–</f:else>
+                  </f:if>
+                </td>
+                <td><f:render section="StatusBadge" arguments="{status: transaction.status}" /></td>
+              </tr>
+            </f:for>
+          </tbody>
+        </table>
+      </div>
+    </f:then>
+    <f:else>
+      <f:be.infobox state="{f:constant(name: 'TYPO3\CMS\Core\Type\ContextualFeedbackSeverity::NOTICE')}">
+        <f:translate key="dashboard.transactions.empty" domain="x402_paywall.mod" />
+        <a href="{simulatorUri}"><f:translate key="dashboard.transactions.empty.simulator" domain="x402_paywall.mod" /></a>
+      </f:be.infobox>
+    </f:else>
+  </f:if>
+
+  <f:if condition="{topPages}">
+    <h2><f:translate key="dashboard.top_pages" domain="x402_paywall.mod" /></h2>
+    <div class="table-fit">
+      <table class="table table-striped table-hover">
+        <caption class="visually-hidden"><f:translate key="dashboard.top_pages.caption" domain="x402_paywall.mod" /></caption>
+        <thead>
+          <tr>
+            <th scope="col"><f:translate key="dashboard.transactions.page" domain="x402_paywall.mod" /></th>
+            <th scope="col" class="text-end"><f:translate key="dashboard.top_pages.payments" domain="x402_paywall.mod" /></th>
+            <th scope="col" class="text-end"><f:translate key="dashboard.top_pages.revenue" domain="x402_paywall.mod" /></th>
+          </tr>
+        </thead>
+        <tbody>
+          <f:for each="{topPages}" as="page">
+            <tr>
+              <td>
+                <be:link.editRecord uid="{page.uid}" table="pages" title="{f:translate(key: 'dashboard.transactions.edit_page', domain: 'x402_paywall.mod')}">
+                  {page.title -> f:or(alternative: '[{page.uid}]')}
+                </be:link.editRecord>
+              </td>
+              <td class="text-end">{page.transactions}</td>
+              <td class="text-end">{page.revenue}</td>
+            </tr>
+          </f:for>
+        </tbody>
+      </table>
     </div>
+  </f:if>
+</f:section>
 
-    <div class="row mt-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <h5 class="card-title mb-0"><f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.configuration" /></h5>
-                </div>
-                <div class="card-body">
-                    <p class="text-muted">
-                        <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.configuration.help" />
-                        <code>config/sites/&lt;identifier&gt;/config.yaml</code>
-                    </p>
-                    <a href="https://github.com/dirnbauer/typo3-x402-paywall" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm">
-                        <f:translate key="LLL:EXT:x402_paywall/Resources/Private/Language/locallang_mod.xlf:dashboard.documentation" />
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-</div>
-
+<f:section name="StatusBadge">
+  <f:switch expression="{status}">
+    <f:case value="settled"><span class="badge badge-success"><f:translate key="status.settled" domain="x402_paywall.mod" /></span></f:case>
+    <f:case value="pending"><span class="badge badge-warning"><f:translate key="status.pending" domain="x402_paywall.mod" /></span></f:case>
+    <f:case value="failed"><span class="badge badge-danger"><f:translate key="status.failed" domain="x402_paywall.mod" /></span></f:case>
+    <f:defaultCase><span class="badge badge-default">{status}</span></f:defaultCase>
+  </f:switch>
 </f:section>
 
 </html>

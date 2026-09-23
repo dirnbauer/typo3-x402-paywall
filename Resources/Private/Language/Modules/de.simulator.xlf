@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="en" trgLang="de">
+  <file id="messages">
+    <unit id="title">
+      <segment>
+        <source>Simulator</source>
+        <target>Simulator</target>
+      </segment>
+    </unit>
+    <unit id="short_description">
+      <segment>
+        <source>Test the payment flow</source>
+        <target>Zahlungsablauf testen</target>
+      </segment>
+    </unit>
+    <unit id="description">
+      <segment>
+        <source>Plays the client side of an x402 payment against your sites and shows the decoded headers.</source>
+        <target>Spielt die Client-Seite einer x402-Zahlung gegen Ihre Sites durch und zeigt die dekodierten Header.</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>

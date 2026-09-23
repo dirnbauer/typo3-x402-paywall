@@ -1,6 +1,6 @@
 {
     "name": "webconsulting/typo3-x402-paywall",
-    "description": "x402 paywall for TYPO3 14: HTTP 402 payment protocol (x402 v2) for pages and API routes, facilitator verification and settlement, payment log, backend dashboard and MCP tools.",
+    "description": "x402 paywall for TYPO3 14: HTTP 402 payment protocol (x402 v2) for pages and API routes, facilitator verification and settlement (x402.org or Coinbase CDP), payment log, backend dashboard, request simulator and MCP tools.",
     "type": "typo3-cms-extension",
     "license": "GPL-2.0-or-later",
     "keywords": [
@@ -31,6 +31,11 @@
     "require": {
         "php": "^8.4",
         "ext-json": "*",
+        "ext-openssl": "*",
+        "firebase/php-jwt": "^7.1",
+        "guzzlehttp/guzzle": "^7.15.2 || ^8.0",
+        "psr/http-client": "^1.0",
+        "psr/http-factory": "^1.1",
         "psr/http-message": "^2.0",
         "psr/http-server-middleware": "^1.0",
         "psr/log": "^3.0",
@@ -42,15 +47,17 @@
     "require-dev": {
         "friendsofphp/php-cs-fixer": "^3.95",
         "phpstan/extension-installer": "^1.4",
-        "phpstan/phpstan": "^2.1",
+        "phpstan/phpstan": "^2.2",
+        "phpstan/phpstan-deprecation-rules": "^2.0",
         "phpstan/phpstan-phpunit": "^2.0",
         "phpstan/phpstan-strict-rules": "^2.0",
-        "phpunit/phpunit": "^12.4 || ^13.0",
+        "phpunit/phpunit": "^13.3",
         "saschaegerer/phpstan-typo3": "^3.1",
         "typo3/coding-standards": "^0.9",
-        "typo3/testing-framework": "^9.5"
+        "typo3/testing-framework": "^9.7"
     },
     "suggest": {
+        "ext-sodium": "Signs Coinbase Developer Platform facilitator tokens with Ed25519 API keys.",
         "hn/typo3-mcp-server": "Exposes the tagged x402_* tools (probe, decode_header, gated_pages, stats, transactions) through MCP."
     },
     "autoload": {
@@ -76,7 +83,6 @@
     "extra": {
         "typo3/cms": {
             "extension-key": "x402_paywall",
-            "app-dir": ".Build",
             "web-dir": ".Build/public"
         }
     },

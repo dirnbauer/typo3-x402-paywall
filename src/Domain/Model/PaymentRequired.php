@@ -20,7 +20,7 @@ use Webconsulting\X402Paywall\Utility\ScalarValue;
  */
 final readonly class PaymentRequired
 {
-    public const X402_VERSION = 2;
+    public const int X402_VERSION = 2;
 
     /**
      * @param list<PaymentRequirement> $accepts Payment options the client may choose from
@@ -78,7 +78,7 @@ final readonly class PaymentRequired
     }
 
     /**
-     * @return array{x402Version: int, error?: string, resource: array<string, string>, accepts: list<array<string, mixed>>, extensions?: array<string, mixed>}
+     * @return array{x402Version: int, error?: string, resource: array<string, string|list<string>>, accepts: list<array<string, mixed>>, extensions?: array<string, mixed>}
      */
     public function toArray(): array
     {

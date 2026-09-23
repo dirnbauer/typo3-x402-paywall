@@ -1,105 +1,135 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="en">
-    <file id="messages" original="messages">
-        <unit id="pages.tab.x402_paywall">
-            <segment>
-                <source>x402 Paywall</source>
-            </segment>
-        </unit>
-        <unit id="pages.tx_x402_paywall_enabled">
-            <segment>
-                <source>Enable x402 paywall</source>
-            </segment>
-        </unit>
-        <unit id="pages.tx_x402_paywall_price">
-            <segment>
-                <source>Price (USDC)</source>
-            </segment>
-        </unit>
-        <unit id="pages.tx_x402_paywall_description">
-            <segment>
-                <source>Content description for payment prompt</source>
-            </segment>
-        </unit>
-        <unit id="pages.tx_x402_paywall_description.placeholder">
-            <segment>
-                <source>Premium content - access requires payment</source>
-            </segment>
-        </unit>
-        <unit id="tx_x402_payment_log">
-            <segment>
-                <source>x402 payment transaction</source>
-            </segment>
-        </unit>
-        <unit id="tx_x402_payment_log.page_uid">
-            <segment>
-                <source>Page</source>
-            </segment>
-        </unit>
-        <unit id="tx_x402_payment_log.content_type">
-            <segment>
-                <source>Content type</source>
-            </segment>
-        </unit>
-        <unit id="tx_x402_payment_log.content_uid">
-            <segment>
-                <source>Content UID</source>
-            </segment>
-        </unit>
-        <unit id="tx_x402_payment_log.amount">
-            <segment>
-                <source>Amount</source>
-            </segment>
-        </unit>
-        <unit id="tx_x402_payment_log.currency">
-            <segment>
-                <source>Currency</source>
-            </segment>
-        </unit>
-        <unit id="tx_x402_payment_log.network">
-            <segment>
-                <source>Network</source>
-            </segment>
-        </unit>
-        <unit id="tx_x402_payment_log.status">
-            <segment>
-                <source>Status</source>
-            </segment>
-        </unit>
-        <unit id="tx_x402_payment_log.tx_hash">
-            <segment>
-                <source>Transaction hash</source>
-            </segment>
-        </unit>
-        <unit id="tx_x402_payment_log.payer_address">
-            <segment>
-                <source>Payer wallet</source>
-            </segment>
-        </unit>
-        <unit id="tx_x402_payment_log.request_uri">
-            <segment>
-                <source>Request URI</source>
-            </segment>
-        </unit>
-        <unit id="tx_x402_payment_log.facilitator_response">
-            <segment>
-                <source>Facilitator response</source>
-            </segment>
-        </unit>
-        <unit id="tx_x402_payment_log.tab.transaction">
-            <segment>
-                <source>Transaction</source>
-            </segment>
-        </unit>
-        <unit id="tx_x402_payment_log.tab.content">
-            <segment>
-                <source>Content</source>
-            </segment>
-        </unit>
-        <unit id="tx_x402_payment_log.tab.payment">
-            <segment>
-                <source>Payment details</source>
-            </segment>
-        </unit>
-    </file>
+  <file id="messages">
+    <unit id="pages.tab.x402_paywall">
+      <segment>
+        <source>x402 Paywall</source>
+      </segment>
+    </unit>
+    <unit id="pages.tx_x402_paywall_enabled">
+      <segment>
+        <source>Sell this page with x402</source>
+      </segment>
+    </unit>
+    <unit id="pages.tx_x402_paywall_enabled.description">
+      <segment>
+        <source>Visitors and agents pay before they get the page.</source>
+      </segment>
+    </unit>
+    <unit id="pages.tx_x402_paywall_price">
+      <segment>
+        <source>Price</source>
+      </segment>
+    </unit>
+    <unit id="pages.tx_x402_paywall_price.description">
+      <segment>
+        <source>Decimal amount in the currency of the site configuration (USDC by default). Empty uses the default price of the site.</source>
+      </segment>
+    </unit>
+    <unit id="pages.tx_x402_paywall_description">
+      <segment>
+        <source>Description for the payment prompt</source>
+      </segment>
+    </unit>
+    <unit id="pages.tx_x402_paywall_description.description">
+      <segment>
+        <source>Shown on the payment page and sent to agents as the resource description. Empty uses the page title.</source>
+      </segment>
+    </unit>
+    <unit id="pages.tx_x402_paywall_description.placeholder">
+      <segment>
+        <source>Premium content - access requires payment</source>
+      </segment>
+    </unit>
+    <unit id="tx_x402_payment_log">
+      <segment>
+        <source>x402 payment</source>
+      </segment>
+    </unit>
+    <unit id="tx_x402_payment_log.page_uid">
+      <segment>
+        <source>Page</source>
+      </segment>
+    </unit>
+    <unit id="tx_x402_payment_log.content_type">
+      <segment>
+        <source>Content type</source>
+      </segment>
+    </unit>
+    <unit id="tx_x402_payment_log.content_uid">
+      <segment>
+        <source>Content UID</source>
+      </segment>
+    </unit>
+    <unit id="tx_x402_payment_log.amount">
+      <segment>
+        <source>Amount</source>
+      </segment>
+    </unit>
+    <unit id="tx_x402_payment_log.currency">
+      <segment>
+        <source>Currency</source>
+      </segment>
+    </unit>
+    <unit id="tx_x402_payment_log.network">
+      <segment>
+        <source>Network</source>
+      </segment>
+    </unit>
+    <unit id="tx_x402_payment_log.status">
+      <segment>
+        <source>Status</source>
+      </segment>
+    </unit>
+    <unit id="tx_x402_payment_log.status.settled">
+      <segment>
+        <source>Settled</source>
+      </segment>
+    </unit>
+    <unit id="tx_x402_payment_log.status.pending">
+      <segment>
+        <source>Pending (check on chain)</source>
+      </segment>
+    </unit>
+    <unit id="tx_x402_payment_log.status.failed">
+      <segment>
+        <source>Failed</source>
+      </segment>
+    </unit>
+    <unit id="tx_x402_payment_log.tx_hash">
+      <segment>
+        <source>Transaction hash</source>
+      </segment>
+    </unit>
+    <unit id="tx_x402_payment_log.payer_address">
+      <segment>
+        <source>Payer wallet</source>
+      </segment>
+    </unit>
+    <unit id="tx_x402_payment_log.request_uri">
+      <segment>
+        <source>Request URI</source>
+      </segment>
+    </unit>
+    <unit id="tx_x402_payment_log.facilitator_response">
+      <segment>
+        <source>Facilitator response</source>
+      </segment>
+    </unit>
+    <unit id="tx_x402_payment_log.tab.transaction">
+      <segment>
+        <source>Transaction</source>
+      </segment>
+    </unit>
+    <unit id="tx_x402_payment_log.tab.content">
+      <segment>
+        <source>Content</source>
+      </segment>
+    </unit>
+    <unit id="tx_x402_payment_log.tab.payment">
+      <segment>
+        <source>Payment details</source>
+      </segment>
+    </unit>
+  </file>
 </xliff>

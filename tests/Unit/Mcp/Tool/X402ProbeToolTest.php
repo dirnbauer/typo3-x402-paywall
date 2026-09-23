@@ -29,7 +29,7 @@ final class X402ProbeToolTest extends UnitTestCase
 {
     use JsonTestTrait;
 
-    private const URL = 'https://93.184.216.34/premium';
+    private const string URL = 'https://93.184.216.34/premium';
 
     #[Test]
     public function toolIsNamedX402Probe(): void

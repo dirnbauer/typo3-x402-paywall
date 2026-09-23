@@ -18,11 +18,11 @@ namespace Webconsulting\X402Paywall\Http;
 final class X402Header
 {
     /** Server -> client: PaymentRequired document. */
-    public const PAYMENT_REQUIRED = 'PAYMENT-REQUIRED';
+    public const string PAYMENT_REQUIRED = 'PAYMENT-REQUIRED';
 
     /** Client -> server: PaymentPayload document. */
-    public const PAYMENT_SIGNATURE = 'PAYMENT-SIGNATURE';
+    public const string PAYMENT_SIGNATURE = 'PAYMENT-SIGNATURE';
 
     /** Server -> client: SettlementResponse document. */
-    public const PAYMENT_RESPONSE = 'PAYMENT-RESPONSE';
+    public const string PAYMENT_RESPONSE = 'PAYMENT-RESPONSE';
 }

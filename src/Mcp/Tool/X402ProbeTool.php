@@ -27,9 +27,9 @@ use Webconsulting\X402Paywall\Utility\ScalarValue;
  */
 final class X402ProbeTool extends AbstractMcpTool
 {
-    public const NAME = 'x402_probe';
+    public const string NAME = 'x402_probe';
 
-    private const TIMEOUT = 10;
+    private const int TIMEOUT = 10;
 
     public function __construct(
         private readonly RequestFactory $requestFactory,

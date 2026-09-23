@@ -21,7 +21,7 @@ use Webconsulting\X402Paywall\Utility\ScalarValue;
  */
 final class X402TransactionsTool extends AbstractMcpTool
 {
-    public const NAME = 'x402_transactions';
+    public const string NAME = 'x402_transactions';
 
     public function __construct(
         private readonly PaymentLogger $paymentLogger,

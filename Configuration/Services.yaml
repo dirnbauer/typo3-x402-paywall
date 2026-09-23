@@ -17,6 +17,3 @@ services:
 
   Webconsulting\X402Paywall\Middleware\X402PaywallMiddleware:
     public: true
-
-  Webconsulting\X402Paywall\Controller\PaywallDashboardController:
-    public: true

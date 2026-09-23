@@ -23,7 +23,18 @@ use Webconsulting\X402Paywall\Utility\ScalarValue;
  */
 final readonly class PaymentRequirement
 {
-    public const SCHEME_EXACT = 'exact';
+    public const string SCHEME_EXACT = 'exact';
+
+    /**
+     * Reserved "extra" keys (specification v2, section 6.1) and the only values this extension
+     * implements; a payload asking for anything else is refused.
+     *
+     * @var array<string, string>
+     */
+    private const array SUPPORTED_RESERVED_EXTRA = [
+        'assetTransferMethod' => 'eip3009',
+        'paymentFlow' => 'authorization',
+    ];
 
     /**
      * @param array<string, mixed> $extra
@@ -96,19 +107,35 @@ final readonly class PaymentRequirement
     }
 
     /**
-     * Whether a client's "accepted" requirement refers to this requirement (addresses compare case-insensitively).
+     * Whether a client's "accepted" requirement is exactly this requirement: every field equal
+     * (addresses compare case-insensitively), every "extra" entry this server declared echoed with the
+     * same value, and no transfer method or payment flow the extension does not implement.
      *
      * @param array<string, mixed> $accepted
      */
     public function matches(array $accepted): bool
     {
         $other = self::fromArray($accepted);
+        if ($other->scheme !== $this->scheme
+            || $other->network !== $this->network
+            || $other->amount !== $this->amount
+            || strcasecmp($other->asset, $this->asset) !== 0
+            || strcasecmp($other->payTo, $this->payTo) !== 0
+            || $other->maxTimeoutSeconds !== $this->maxTimeoutSeconds
+        ) {
+            return false;
+        }
 
-        return $other->scheme === $this->scheme
-            && $other->network === $this->network
-            && $other->amount === $this->amount
-            && strcasecmp($other->asset, $this->asset) === 0
-            && strcasecmp($other->payTo, $this->payTo) === 0;
+        foreach ($this->extra as $key => $value) {
+            if (!array_key_exists($key, $other->extra) || $other->extra[$key] !== $value) {
+                return false;
+            }
+        }
+
+        return array_all(
+            self::SUPPORTED_RESERVED_EXTRA,
+            static fn(string $supported, string $key): bool => !array_key_exists($key, $other->extra) || $other->extra[$key] === $supported,
+        );
     }
 
     /**

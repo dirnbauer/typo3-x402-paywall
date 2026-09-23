@@ -1,0 +1,10 @@
+/*
+ * EXT:x402_paywall backend module: exchange panels of the simulator.
+ * Layout only; colors come from the backend theme.
+ */
+.x402-simulator-code {
+  max-height: 24rem;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

@@ -29,11 +29,17 @@ final class VerifyResponseTest extends UnitTestCase
     }
 
     #[Test]
-    public function invalidResponsesFallBackThroughTheReasonFields(): void
+    public function invalidResponsesKeepReasonCodeAndMessageApart(): void
     {
-        self::assertSame('insufficient_funds', VerifyResponse::fromArray(['isValid' => false, 'invalidReason' => 'insufficient_funds'])->invalidReason);
-        self::assertSame('bad request', VerifyResponse::fromArray(['error' => 'bad request'])->invalidReason);
-        self::assertSame('verification_failed', VerifyResponse::fromArray(['isValid' => 'true'])->invalidReason);
-        self::assertSame('facilitator_unreachable', VerifyResponse::invalid('facilitator_unreachable')->invalidReason);
+        $rejected = VerifyResponse::fromArray(['isValid' => false, 'invalidReason' => 'insufficient_funds', 'invalidMessage' => 'Balance too low']);
+        self::assertSame('insufficient_funds', $rejected->invalidReason);
+        self::assertSame('Balance too low', $rejected->invalidMessage);
+
+        $apiError = VerifyResponse::fromArray(['error' => 'bad request']);
+        self::assertSame('unexpected_verify_error', $apiError->invalidReason);
+        self::assertSame('bad request', $apiError->invalidMessage);
+
+        self::assertSame('unexpected_verify_error', VerifyResponse::fromArray(['isValid' => 'true'])->invalidReason);
+        self::assertSame('invalid_payload', VerifyResponse::invalid('invalid_payload')->invalidReason);
     }
 }

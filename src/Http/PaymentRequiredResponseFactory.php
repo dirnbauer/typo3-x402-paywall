@@ -21,6 +21,7 @@ use TYPO3\CMS\Core\View\ViewFactoryInterface;
 use Webconsulting\X402Paywall\Configuration\PaywallConfiguration;
 use Webconsulting\X402Paywall\Domain\Model\PaymentRequired;
 use Webconsulting\X402Paywall\Domain\Model\PaymentRequirement;
+use Webconsulting\X402Paywall\Domain\Model\SettlementResponse;
 use Webconsulting\X402Paywall\Legacy\X402V1;
 use Webconsulting\X402Paywall\Utility\Json;
 
@@ -29,15 +30,18 @@ use Webconsulting\X402Paywall\Utility\Json;
  * PAYMENT-REQUIRED header; the body is implementation-specific per the HTTP transport specification.
  * Browsers (Accept: text/html) receive the wallet paywall page, every other client a JSON copy of the
  * document (the v1 "PaymentRequirementsResponse" shape when legacy_v1 is enabled).
+ *
+ * A payment that verified but did not settle is answered with a 402 carrying the SettlementResponse
+ * in PAYMENT-RESPONSE instead (HTTP transport v2, "Settlement Response Delivery").
  */
-final class PaymentRequiredResponseFactory
+final readonly class PaymentRequiredResponseFactory
 {
-    private const TEMPLATE_ROOT = 'EXT:x402_paywall/Resources/Private/Templates/Paywall';
+    private const string TEMPLATE_ROOT = 'EXT:x402_paywall/Resources/Private/Templates/Paywall';
 
     public function __construct(
-        private readonly ResponseFactoryInterface $responseFactory,
-        private readonly StreamFactoryInterface $streamFactory,
-        private readonly ViewFactoryInterface $viewFactory,
+        private ResponseFactoryInterface $responseFactory,
+        private StreamFactoryInterface $streamFactory,
+        private ViewFactoryInterface $viewFactory,
     ) {}
 
     public function isBrowserRequest(ServerRequestInterface $request): bool
@@ -72,6 +76,30 @@ final class PaymentRequiredResponseFactory
         return $response
             ->withHeader('Content-Type', 'application/json')
             ->withBody($this->streamFactory->createStream(Json::encode($body, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)));
+    }
+
+    /**
+     * 402 for a verified payment that did not settle. x402 v2 clients get the SettlementResponse in
+     * PAYMENT-RESPONSE and a JSON copy as body; x402 v1 clients the v1 402 body with the error reason,
+     * as before, plus X-PAYMENT-RESPONSE.
+     */
+    public function createSettlementFailure(
+        ServerRequestInterface $request,
+        PaymentRequired $paymentRequired,
+        PaywallConfiguration $config,
+        SettlementResponse $settlement,
+        bool $legacy,
+    ): ResponseInterface {
+        if ($legacy) {
+            return $this->create($request, $paymentRequired, $config, $settlement->errorReason)
+                ->withHeader(X402V1::HEADER_PAYMENT_RESPONSE, $settlement->toHeaderValue());
+        }
+
+        return $this->responseFactory->createResponse(402, 'Payment Required')
+            ->withHeader(X402Header::PAYMENT_RESPONSE, $settlement->toHeaderValue())
+            ->withHeader('Cache-Control', 'no-store')
+            ->withHeader('Content-Type', 'application/json')
+            ->withBody($this->streamFactory->createStream(Json::encode($settlement->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES)));
     }
 
     private function renderPaywall(ServerRequestInterface $request, PaymentRequired $paymentRequired, PaywallConfiguration $config): string

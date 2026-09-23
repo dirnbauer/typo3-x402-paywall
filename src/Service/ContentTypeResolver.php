@@ -21,14 +21,14 @@ use Webconsulting\X402Paywall\Utility\ScalarValue;
  * event extensions are single TYPO3 pages with a plugin, but revenue should be attributed to the record
  * named in the plugin parameters (e.g. tx_news_pi1[news]=42). Falls back to ("page", $pageUid).
  */
-final class ContentTypeResolver
+final readonly class ContentTypeResolver
 {
     /**
      * Plugin namespace => [UID parameter, content type stored in tx_x402_payment_log.content_type].
      *
      * @var array<string, array{0: string, 1: string}>
      */
-    private const PLUGIN_MAP = [
+    private const array PLUGIN_MAP = [
         'tx_news_pi1' => ['news', 'news'],
         'tx_news' => ['news', 'news'],
         'tx_blog_pi1' => ['post', 'blog_post'],

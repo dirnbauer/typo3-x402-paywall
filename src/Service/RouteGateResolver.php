@@ -24,7 +24,7 @@ use Webconsulting\X402Paywall\Utility\ScalarValue;
  * Gating sources, in order: free_routes (always win), gated_route_patterns, gated_page_uids and the
  * page toggle tx_x402_paywall_enabled. Route patterns are exact paths, "/prefix/*" or fnmatch() globs.
  */
-final class RouteGateResolver
+final readonly class RouteGateResolver
 {
     public function isGated(ServerRequestInterface $request, PaywallConfiguration $config): bool
     {
@@ -72,6 +72,18 @@ final class RouteGateResolver
         }
 
         return $request->getUri()->getPath();
+    }
+
+    /**
+     * ResourceInfo.mimeType: a regular page (type 0) renders HTML; for other page types the
+     * response format is unknown before rendering, so none is announced.
+     */
+    public function getMimeType(ServerRequestInterface $request): string
+    {
+        $routing = $request->getAttribute('routing');
+        $pageType = $routing instanceof PageArguments ? $routing->getPageType() : '';
+
+        return in_array($pageType, ['', '0'], true) ? 'text/html' : '';
     }
 
     /**

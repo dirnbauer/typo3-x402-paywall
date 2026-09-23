@@ -24,7 +24,7 @@ use Webconsulting\X402Paywall\Domain\Model\PaymentRequired;
  */
 final class X402PaywallMiddlewareTest extends FunctionalTestCase
 {
-    private const WALLET = '0x1111111111111111111111111111111111111111';
+    private const string WALLET = '0x1111111111111111111111111111111111111111';
 
     protected array $testExtensionsToLoad = ['webconsulting/typo3-x402-paywall'];
 

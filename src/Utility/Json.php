@@ -31,6 +31,23 @@ final class Json
     }
 
     /**
+     * Decodes a JSON object keeping JSON objects as objects, so an empty object
+     * ({}) survives a decode/encode round trip instead of turning into [].
+     *
+     * @throws \JsonException when the input is not JSON
+     * @throws \InvalidArgumentException when the JSON value is not an object
+     */
+    public static function decodeObjectPreserving(string $json): \stdClass
+    {
+        $value = json_decode($json, false, flags: JSON_THROW_ON_ERROR);
+        if (!$value instanceof \stdClass) {
+            throw new \InvalidArgumentException('The JSON document is not an object', 1757600014);
+        }
+
+        return $value;
+    }
+
+    /**
      * Coerces a decoded JSON value (or any configuration value) into a string-keyed array.
      * Non-array values yield [].
      *

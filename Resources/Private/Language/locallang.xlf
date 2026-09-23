@@ -1,80 +1,90 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="en">
-    <file id="messages" original="messages">
-        <unit id="paywall.title">
-            <segment>
-                <source>Payment required</source>
-            </segment>
-        </unit>
-        <unit id="paywall.pay_button">
-            <segment>
-                <source>Pay</source>
-            </segment>
-        </unit>
-        <unit id="paywall.processing">
-            <segment>
-                <source>Processing...</source>
-            </segment>
-        </unit>
-        <unit id="paywall.success">
-            <segment>
-                <source>Payment accepted, loading content...</source>
-            </segment>
-        </unit>
-        <unit id="paywall.powered_by">
-            <segment>
-                <source>Powered by</source>
-            </segment>
-        </unit>
-        <unit id="paywall.network_prefix">
-            <segment>
-                <source>via x402 on</source>
-            </segment>
-        </unit>
-        <unit id="paywall.resource">
-            <segment>
-                <source>Resource:</source>
-            </segment>
-        </unit>
-        <unit id="paywall.error.missing_config">
-            <segment>
-                <source>Payment configuration is missing.</source>
-            </segment>
-        </unit>
-        <unit id="paywall.error.invalid_config">
-            <segment>
-                <source>Payment configuration is invalid.</source>
-            </segment>
-        </unit>
-        <unit id="paywall.error.no_wallet">
-            <segment>
-                <source>No wallet found. Install an EIP-1193 wallet such as MetaMask, Coinbase Wallet or Rabby.</source>
-            </segment>
-        </unit>
-        <unit id="paywall.error.no_account">
-            <segment>
-                <source>No wallet account was selected.</source>
-            </segment>
-        </unit>
-        <unit id="paywall.error.wrong_network">
-            <segment>
-                <source>Please switch your wallet to the required network.</source>
-            </segment>
-        </unit>
-        <unit id="paywall.error.signature_cancelled">
-            <segment>
-                <source>The signature request was cancelled.</source>
-            </segment>
-        </unit>
-        <unit id="paywall.error.verification_failed">
-            <segment>
-                <source>The payment was not accepted.</source>
-            </segment>
-        </unit>
-        <unit id="paywall.error.unexpected">
-            <segment>
-                <source>An unexpected error occurred. Please try again.</source>
-            </segment>
-        </unit>
-    </file>
+  <file id="messages">
+    <unit id="paywall.title">
+      <segment>
+        <source>Payment required</source>
+      </segment>
+    </unit>
+    <unit id="paywall.pay_button">
+      <segment>
+        <source>Pay</source>
+      </segment>
+    </unit>
+    <unit id="paywall.processing">
+      <segment>
+        <source>Processing …</source>
+      </segment>
+    </unit>
+    <unit id="paywall.success">
+      <segment>
+        <source>Payment accepted, loading the content …</source>
+      </segment>
+    </unit>
+    <unit id="paywall.powered_by">
+      <segment>
+        <source>Powered by</source>
+      </segment>
+    </unit>
+    <unit id="paywall.network_prefix">
+      <segment>
+        <source>via x402 on</source>
+      </segment>
+    </unit>
+    <unit id="paywall.resource">
+      <segment>
+        <source>Resource:</source>
+      </segment>
+    </unit>
+    <unit id="paywall.error.missing_config">
+      <segment>
+        <source>Payment configuration is missing.</source>
+      </segment>
+    </unit>
+    <unit id="paywall.error.invalid_config">
+      <segment>
+        <source>Payment configuration is invalid.</source>
+      </segment>
+    </unit>
+    <unit id="paywall.error.no_wallet">
+      <segment>
+        <source>No wallet found. Install an EIP-1193 wallet such as MetaMask, Coinbase Wallet or Rabby.</source>
+      </segment>
+    </unit>
+    <unit id="paywall.error.no_account">
+      <segment>
+        <source>No wallet account was selected.</source>
+      </segment>
+    </unit>
+    <unit id="paywall.error.wrong_network">
+      <segment>
+        <source>Please switch your wallet to the required network.</source>
+      </segment>
+    </unit>
+    <unit id="paywall.error.signature_cancelled">
+      <segment>
+        <source>The signature request was cancelled.</source>
+      </segment>
+    </unit>
+    <unit id="paywall.error.verification_failed">
+      <segment>
+        <source>The payment was not accepted.</source>
+      </segment>
+    </unit>
+    <unit id="paywall.error.settlement_failed">
+      <segment>
+        <source>The payment could not be completed.</source>
+      </segment>
+    </unit>
+    <unit id="paywall.error.settlement_pending">
+      <segment>
+        <source>Your payment could not be confirmed yet. Before you pay again, check your wallet for the transfer and reload this page in a minute.</source>
+      </segment>
+    </unit>
+    <unit id="paywall.error.unexpected">
+      <segment>
+        <source>An unexpected error occurred. Please try again.</source>
+      </segment>
+    </unit>
+  </file>
 </xliff>

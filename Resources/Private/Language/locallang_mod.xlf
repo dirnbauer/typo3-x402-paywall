@@ -1,235 +1,465 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="en">
-    <file id="messages" original="messages">
-        <unit id="mlang_labels_tablabel">
-            <segment>
-                <source>x402 payment dashboard</source>
-            </segment>
-        </unit>
-        <unit id="mlang_tabs_tab">
-            <segment>
-                <source>x402 Paywall</source>
-            </segment>
-        </unit>
-        <unit id="dashboard.period.today">
-            <segment>
-                <source>Today</source>
-            </segment>
-        </unit>
-        <unit id="dashboard.period.last_7_days">
-            <segment>
-                <source>Last 7 days</source>
-            </segment>
-        </unit>
-        <unit id="dashboard.period.last_30_days">
-            <segment>
-                <source>Last 30 days</source>
-            </segment>
-        </unit>
-        <unit id="dashboard.period.all_time">
-            <segment>
-                <source>All time</source>
-            </segment>
-        </unit>
-        <unit id="dashboard.transactions">
-            <segment>
-                <source>Transactions</source>
-            </segment>
-        </unit>
-        <unit id="dashboard.top_pages">
-            <segment>
-                <source>Top pages (30 days)</source>
-            </segment>
-        </unit>
-        <unit id="dashboard.page_uid">
-            <segment>
-                <source>Page UID</source>
-            </segment>
-        </unit>
-        <unit id="dashboard.revenue_usdc">
-            <segment>
-                <source>Revenue (USDC)</source>
-            </segment>
-        </unit>
-        <unit id="dashboard.no_payments">
-            <segment>
-                <source>No payments recorded yet. Configure gated pages and wait for traffic.</source>
-            </segment>
-        </unit>
-        <unit id="dashboard.recent_transactions">
-            <segment>
-                <source>Recent transactions</source>
-            </segment>
-        </unit>
-        <unit id="dashboard.time">
-            <segment>
-                <source>Time</source>
-            </segment>
-        </unit>
-        <unit id="dashboard.page">
-            <segment>
-                <source>Page</source>
-            </segment>
-        </unit>
-        <unit id="dashboard.amount">
-            <segment>
-                <source>Amount</source>
-            </segment>
-        </unit>
-        <unit id="dashboard.network">
-            <segment>
-                <source>Network</source>
-            </segment>
-        </unit>
-        <unit id="dashboard.status">
-            <segment>
-                <source>Status</source>
-            </segment>
-        </unit>
-        <unit id="dashboard.status.settled">
-            <segment>
-                <source>settled</source>
-            </segment>
-        </unit>
-        <unit id="dashboard.no_transactions">
-            <segment>
-                <source>No transactions yet.</source>
-            </segment>
-        </unit>
-        <unit id="dashboard.configuration">
-            <segment>
-                <source>Configuration</source>
-            </segment>
-        </unit>
-        <unit id="dashboard.configuration.help">
-            <segment>
-                <source>Configure x402 paywall settings in your site configuration. Enable the paywall per page with the x402 Paywall tab in page properties.</source>
-            </segment>
-        </unit>
-        <unit id="dashboard.documentation">
-            <segment>
-                <source>Documentation on GitHub</source>
-            </segment>
-        </unit>
-        <unit id="simulator.title">
-            <segment>
-                <source>x402 flow simulator</source>
-            </segment>
-        </unit>
-        <unit id="simulator.scenario">
-            <segment>
-                <source>Scenario</source>
-            </segment>
-        </unit>
-        <unit id="simulator.url">
-            <segment>
-                <source>URL</source>
-            </segment>
-        </unit>
-        <unit id="simulator.run">
-            <segment>
-                <source>Simulate</source>
-            </segment>
-        </unit>
-        <unit id="simulator.running">
-            <segment>
-                <source>Running...</source>
-            </segment>
-        </unit>
-        <unit id="simulator.request">
-            <segment>
-                <source>Request</source>
-            </segment>
-        </unit>
-        <unit id="simulator.response">
-            <segment>
-                <source>Response</source>
-            </segment>
-        </unit>
-        <unit id="simulator.requirement">
-            <segment>
-                <source>Decoded payment requirement</source>
-            </segment>
-        </unit>
-        <unit id="simulator.waiting_request">
-            <segment>
-                <source>Select a scenario and run the simulation.</source>
-            </segment>
-        </unit>
-        <unit id="simulator.waiting_response">
-            <segment>
-                <source>Waiting for simulation result.</source>
-            </segment>
-        </unit>
-        <unit id="simulator.error">
-            <segment>
-                <source>Error</source>
-            </segment>
-        </unit>
-        <unit id="simulator.error.invalid_json">
-            <segment>
-                <source>Invalid JSON body.</source>
-            </segment>
-        </unit>
-        <unit id="simulator.error.missing_url">
-            <segment>
-                <source>No URL provided.</source>
-            </segment>
-        </unit>
-        <unit id="simulator.error.disallowed_url">
-            <segment>
-                <source>Only public http and https URLs are supported.</source>
-            </segment>
-        </unit>
-        <unit id="simulator.scenario.plain_get.label">
-            <segment>
-                <source>Plain GET returns 402</source>
-            </segment>
-        </unit>
-        <unit id="simulator.scenario.plain_get.description">
-            <segment>
-                <source>A client requests gated content without payment. TYPO3 returns payment requirements with status 402.</source>
-            </segment>
-        </unit>
-        <unit id="simulator.scenario.mock_signature.label">
-            <segment>
-                <source>Mock signature is rejected</source>
-            </segment>
-        </unit>
-        <unit id="simulator.scenario.mock_signature.description">
-            <segment>
-                <source>The client sends a fake payment signature. The facilitator rejects it and confirms the verification path.</source>
-            </segment>
-        </unit>
-        <unit id="simulator.scenario.news_detail.label">
-            <segment>
-                <source>News detail page</source>
-            </segment>
-        </unit>
-        <unit id="simulator.scenario.news_detail.description">
-            <segment>
-                <source>Gated news article request for an EXT:news detail plugin.</source>
-            </segment>
-        </unit>
-        <unit id="simulator.scenario.api_route.label">
-            <segment>
-                <source>Headless API route</source>
-            </segment>
-        </unit>
-        <unit id="simulator.scenario.api_route.description">
-            <segment>
-                <source>A headless API endpoint gated by a configured route pattern.</source>
-            </segment>
-        </unit>
-        <unit id="simulator.scenario.facilitator_check.label">
-            <segment>
-                <source>Facilitator /supported</source>
-            </segment>
-        </unit>
-        <unit id="simulator.scenario.facilitator_check.description">
-            <segment>
-                <source>Calls GET /supported of the x402 facilitator and lists the supported (x402Version, scheme, network) kinds.</source>
-            </segment>
-        </unit>
-    </file>
+  <file id="messages">
+    <unit id="dashboard.title">
+      <segment>
+        <source>x402 Paywall dashboard</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.description">
+      <segment>
+        <source>Settled revenue, the latest settlement attempts and the paywall configuration of every site. Payments settle through the x402 facilitator configured for the site.</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.pending.title">
+      <segment>
+        <source>{count, plural, one {# settlement is pending} other {# settlements are pending}}</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.pending.description">
+      <segment>
+        <source>The facilitator broadcast these payments but could not confirm them, or it did not answer. The payers did not get the content. Check each transaction on a block explorer before anyone pays again.</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.revenue">
+      <segment>
+        <source>Settled revenue</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.payments">
+      <segment>
+        <source>{count, plural, one {# payment} other {# payments}}</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.period.today">
+      <segment>
+        <source>Today</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.period.last_7_days">
+      <segment>
+        <source>Last 7 days</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.period.last_30_days">
+      <segment>
+        <source>Last 30 days</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.period.all_time">
+      <segment>
+        <source>All time</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.sites">
+      <segment>
+        <source>Sites</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.sites.caption">
+      <segment>
+        <source>Paywall configuration per site</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.sites.site">
+      <segment>
+        <source>Site</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.sites.state">
+      <segment>
+        <source>State</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.sites.network">
+      <segment>
+        <source>Network</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.sites.price">
+      <segment>
+        <source>Default price</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.sites.facilitator">
+      <segment>
+        <source>Facilitator</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.sites.actions">
+      <segment>
+        <source>Actions</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.sites.active">
+      <segment>
+        <source>Active</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.sites.incomplete">
+      <segment>
+        <source>Incomplete</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.sites.disabled">
+      <segment>
+        <source>Disabled</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.sites.legacy">
+      <segment>
+        <source>Accepts x402 v1</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.sites.attention">
+      <segment>
+        <source>Needs attention</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.sites.cdp">
+      <segment>
+        <source>CDP API key</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.sites.test">
+      <segment>
+        <source>Test</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.sites.empty.title">
+      <segment>
+        <source>No site uses the paywall yet</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.sites.empty.description">
+      <segment>
+        <source>Add an x402_paywall block to the configuration of a site (config/sites/&lt;identifier&gt;/config.yaml), then enable the paywall in the page properties of the pages you want to sell.</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.transactions">
+      <segment>
+        <source>Latest settlement attempts</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.transactions.caption">
+      <segment>
+        <source>The 20 most recent settlement attempts</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.transactions.time">
+      <segment>
+        <source>Time</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.transactions.page">
+      <segment>
+        <source>Page</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.transactions.amount">
+      <segment>
+        <source>Amount</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.transactions.network">
+      <segment>
+        <source>Network</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.transactions.payer">
+      <segment>
+        <source>Payer</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.transactions.transaction">
+      <segment>
+        <source>Transaction</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.transactions.status">
+      <segment>
+        <source>Status</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.transactions.edit_page">
+      <segment>
+        <source>Edit page properties</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.transactions.empty">
+      <segment>
+        <source>No payment has been settled yet.</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.transactions.empty.simulator">
+      <segment>
+        <source>Test the payment flow in the simulator.</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.top_pages">
+      <segment>
+        <source>Top pages (last 30 days)</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.top_pages.caption">
+      <segment>
+        <source>Pages with the highest settled revenue in the last 30 days</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.top_pages.payments">
+      <segment>
+        <source>Payments</source>
+      </segment>
+    </unit>
+    <unit id="dashboard.top_pages.revenue">
+      <segment>
+        <source>Revenue</source>
+      </segment>
+    </unit>
+    <unit id="status.settled">
+      <segment>
+        <source>Settled</source>
+      </segment>
+    </unit>
+    <unit id="status.pending">
+      <segment>
+        <source>Pending</source>
+      </segment>
+    </unit>
+    <unit id="status.failed">
+      <segment>
+        <source>Failed</source>
+      </segment>
+    </unit>
+    <unit id="problem.missing_wallet">
+      <segment>
+        <source>No receiving wallet (wallet_address) is configured.</source>
+      </segment>
+    </unit>
+    <unit id="problem.unknown_asset">
+      <segment>
+        <source>The token contract is unknown: set asset_address, asset_decimals, asset_name and asset_version for this network and currency.</source>
+      </segment>
+    </unit>
+    <unit id="problem.testnet_facilitator">
+      <segment>
+        <source>The x402.org facilitator settles on testnets only. Use a mainnet facilitator such as Coinbase CDP for this network.</source>
+      </segment>
+    </unit>
+    <unit id="problem.cdp_without_authentication">
+      <segment>
+        <source>The Coinbase CDP facilitator needs facilitator_auth: cdp and an API key.</source>
+      </segment>
+    </unit>
+    <unit id="problem.missing_cdp_credentials">
+      <segment>
+        <source>CDP authentication is enabled, but no API key is available (facilitator_api_key_id and facilitator_api_key_secret, or the environment variables CDP_API_KEY_ID and CDP_API_KEY_SECRET).</source>
+      </segment>
+    </unit>
+    <unit id="problem.unknown_facilitator_auth">
+      <segment>
+        <source>facilitator_auth has an unknown value; the only supported value is cdp.</source>
+      </segment>
+    </unit>
+    <unit id="problem.invalid_service_name">
+      <segment>
+        <source>service_name is ignored: it must be printable ASCII of at most 32 characters.</source>
+      </segment>
+    </unit>
+    <unit id="problem.invalid_service_tags">
+      <segment>
+        <source>Some service_tags are ignored: at most 5 tags of printable ASCII with at most 32 characters each.</source>
+      </segment>
+    </unit>
+    <unit id="problem.invalid_service_icon_url">
+      <segment>
+        <source>service_icon_url is ignored: it must be an absolute http(s) URL of at most 2048 characters.</source>
+      </segment>
+    </unit>
+    <unit id="simulator.title">
+      <segment>
+        <source>x402 payment simulator</source>
+      </segment>
+    </unit>
+    <unit id="simulator.description">
+      <segment>
+        <source>Plays the client side of an x402 payment against a site of this installation: request a paywalled page, send a payment with an invalid signature or ask the facilitator what it supports. Nothing is paid.</source>
+      </segment>
+    </unit>
+    <unit id="simulator.site">
+      <segment>
+        <source>Site</source>
+      </segment>
+    </unit>
+    <unit id="simulator.scenario">
+      <segment>
+        <source>Scenario</source>
+      </segment>
+    </unit>
+    <unit id="simulator.url">
+      <segment>
+        <source>URL</source>
+      </segment>
+    </unit>
+    <unit id="simulator.url.description">
+      <segment>
+        <source>Requests go to the selected site or to public http(s) addresses.</source>
+      </segment>
+    </unit>
+    <unit id="simulator.run">
+      <segment>
+        <source>Run</source>
+      </segment>
+    </unit>
+    <unit id="simulator.running">
+      <segment>
+        <source>Running …</source>
+      </segment>
+    </unit>
+    <unit id="simulator.empty">
+      <segment>
+        <source>Choose a scenario and run it to see the requests, the responses and the decoded x402 headers.</source>
+      </segment>
+    </unit>
+    <unit id="simulator.no_site.title">
+      <segment>
+        <source>No site found</source>
+      </segment>
+    </unit>
+    <unit id="simulator.no_site.description">
+      <segment>
+        <source>The simulator sends its requests to a site. Create a site configuration first.</source>
+      </segment>
+    </unit>
+    <unit id="simulator.step">
+      <segment>
+        <source>Step {number}</source>
+      </segment>
+    </unit>
+    <unit id="simulator.request">
+      <segment>
+        <source>Request</source>
+      </segment>
+    </unit>
+    <unit id="simulator.response">
+      <segment>
+        <source>Response</source>
+      </segment>
+    </unit>
+    <unit id="simulator.decoded">
+      <segment>
+        <source>Decoded {header}</source>
+      </segment>
+    </unit>
+    <unit id="simulator.scenario.unpaid">
+      <segment>
+        <source>Request without payment</source>
+      </segment>
+    </unit>
+    <unit id="simulator.scenario.unpaid.description">
+      <segment>
+        <source>Requests a paywalled page of the site without paying. Expected: 402 with the payment requirements in PAYMENT-REQUIRED.</source>
+      </segment>
+    </unit>
+    <unit id="simulator.scenario.mock_signature">
+      <segment>
+        <source>Payment with an invalid signature</source>
+      </segment>
+    </unit>
+    <unit id="simulator.scenario.mock_signature.description">
+      <segment>
+        <source>Answers the 402 like a wallet would, with a well-formed payment whose signature is invalid. Expected: the facilitator rejects it and the site answers 402 with the reason.</source>
+      </segment>
+    </unit>
+    <unit id="simulator.scenario.route_pattern">
+      <segment>
+        <source>Gated API route</source>
+      </segment>
+    </unit>
+    <unit id="simulator.scenario.route_pattern.description">
+      <segment>
+        <source>Requests the first entry of gated_route_patterns of the site without paying.</source>
+      </segment>
+    </unit>
+    <unit id="simulator.scenario.facilitator">
+      <segment>
+        <source>Facilitator capabilities</source>
+      </segment>
+    </unit>
+    <unit id="simulator.scenario.facilitator.description">
+      <segment>
+        <source>Calls GET /supported of the facilitator configured for the site, with its API key, and checks that it offers exact payments on the network of the site.</source>
+      </segment>
+    </unit>
+    <unit id="simulator.error.invalid_request">
+      <segment>
+        <source>The simulator request is invalid.</source>
+      </segment>
+    </unit>
+    <unit id="simulator.error.unknown_site">
+      <segment>
+        <source>The site does not exist.</source>
+      </segment>
+    </unit>
+    <unit id="simulator.error.missing_url">
+      <segment>
+        <source>Enter a URL.</source>
+      </segment>
+    </unit>
+    <unit id="simulator.error.disallowed_url">
+      <segment>
+        <source>Only URLs of the selected site and public http(s) URLs can be requested.</source>
+      </segment>
+    </unit>
+    <unit id="simulator.error.request_failed">
+      <segment>
+        <source>The simulation could not be run.</source>
+      </segment>
+    </unit>
+    <unit id="simulator.outcome.payment_required">
+      <segment>
+        <source>The paywall works: 402 Payment Required, {amount} atomic units on {network}.</source>
+      </segment>
+    </unit>
+    <unit id="simulator.outcome.rejected">
+      <segment>
+        <source>The payment was rejected: {reason}</source>
+      </segment>
+    </unit>
+    <unit id="simulator.outcome.settlement_failed">
+      <segment>
+        <source>The payment was verified but not settled: {reason}</source>
+      </segment>
+    </unit>
+    <unit id="simulator.outcome.not_gated">
+      <segment>
+        <source>HTTP {status}: the content was delivered without payment. The URL is not gated, or the paywall is disabled for the site.</source>
+      </segment>
+    </unit>
+    <unit id="simulator.outcome.unexpected_status">
+      <segment>
+        <source>Unexpected HTTP status {status}.</source>
+      </segment>
+    </unit>
+    <unit id="simulator.outcome.unreachable">
+      <segment>
+        <source>The request failed: {error}</source>
+      </segment>
+    </unit>
+    <unit id="simulator.outcome.facilitator_supports">
+      <segment>
+        <source>The facilitator offers x402 v2 exact payments on {network}.</source>
+      </segment>
+    </unit>
+    <unit id="simulator.outcome.facilitator_lacks">
+      <segment>
+        <source>The facilitator answered, but it does not list x402 v2 exact payments on {network}.</source>
+      </segment>
+    </unit>
+    <unit id="simulator.outcome.facilitator_failed">
+      <segment>
+        <source>The facilitator did not answer GET /supported: {error}</source>
+      </segment>
+    </unit>
+  </file>
 </xliff>

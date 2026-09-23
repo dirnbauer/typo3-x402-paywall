@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xliff version="2.0" xmlns="urn:oasis:names:tc:xliff:document:2.0" srcLang="en" trgLang="de">
+  <file id="messages">
+    <unit id="title">
+      <segment>
+        <source>x402 Paywall</source>
+        <target>x402-Bezahlschranke</target>
+      </segment>
+    </unit>
+    <unit id="short_description">
+      <segment>
+        <source>HTTP 402 payments for pages and API routes</source>
+        <target>HTTP-402-Zahlungen für Seiten und API-Routen</target>
+      </segment>
+    </unit>
+    <unit id="description">
+      <segment>
+        <source>Revenue, payment log and configuration check of the x402 paywall, and a simulator for the payment flow.</source>
+        <target>Einnahmen, Zahlungsprotokoll und Konfigurationsprüfung der x402-Bezahlschranke sowie ein Simulator für den Zahlungsablauf.</target>
+      </segment>
+    </unit>
+  </file>
+</xliff>

@@ -74,6 +74,21 @@ final class PaymentLoggerTest extends FunctionalTestCase
     }
 
     #[Test]
+    public function revenueIsReportedPerCurrencyAndAttemptsPerStatus(): void
+    {
+        $this->importCSVDataSet(__DIR__ . '/../Fixtures/tx_x402_payment_log_more.csv');
+        $logger = $this->get(PaymentLogger::class);
+
+        self::assertSame([
+            ['currency' => 'EURC', 'transactions' => 1, 'revenue' => '2'],
+            ['currency' => 'USDC', 'transactions' => 3, 'revenue' => '1.6'],
+        ], $logger->getRevenueByCurrency());
+        self::assertSame([['currency' => 'EURC', 'transactions' => 1, 'revenue' => '2']], $logger->getRevenueByCurrency(1700400000));
+        self::assertSame(['settled' => 4, 'pending' => 1, 'failed' => 1], $logger->countByStatus());
+        self::assertSame(['settled' => 1, 'pending' => 1, 'failed' => 0], $logger->countByStatus(1700300000));
+    }
+
+    #[Test]
     public function mcpToolsReportTheLog(): void
     {
         $stats = Json::decodeObject($this->get(X402StatsTool::class)->execute(['period' => 'all']));

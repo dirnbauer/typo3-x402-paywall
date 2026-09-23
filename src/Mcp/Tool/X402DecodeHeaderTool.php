@@ -28,7 +28,7 @@ use Webconsulting\X402Paywall\Utility\ScalarValue;
  */
 final class X402DecodeHeaderTool extends AbstractMcpTool
 {
-    public const NAME = 'x402_decode_header';
+    public const string NAME = 'x402_decode_header';
 
     public function getName(): string
     {
@@ -142,6 +142,8 @@ final class X402DecodeHeaderTool extends AbstractMcpTool
                 'network' => $settlement->network,
                 'payer' => $settlement->payer,
                 'error' => $settlement->errorReason,
+                'message' => $settlement->errorMessage,
+                'pending' => $settlement->isSettlementPending(),
             ];
         }
 

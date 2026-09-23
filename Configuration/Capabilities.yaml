@@ -17,7 +17,13 @@ capabilities:
   network:
     outbound:
       - host: "x402.org"
-        purpose: "x402 facilitator (configurable): POST /verify, POST /settle, GET /supported"
+        purpose: "Default x402 facilitator (testnets only): POST /verify, POST /settle, GET /supported"
+        protocol: "https"
+      - host: "api.cdp.coinbase.com"
+        purpose: "Coinbase Developer Platform x402 facilitator (facilitator_auth: cdp): POST /verify, POST /settle, GET /supported"
+        protocol: "https"
+      - host: "*"
+        purpose: "Any other facilitator_url configured for a site; backend simulator probes of the site itself or public URLs"
         protocol: "https"
   events:
     dispatches:
@@ -25,4 +31,4 @@ capabilities:
       - Webconsulting\X402Paywall\Event\PaymentReceivedEvent
   risk:
     level: "medium"
-    justification: "Frontend middleware answering 402, outbound facilitator calls, writes a payment log"
+    justification: "Frontend middleware answering 402, outbound facilitator calls (optionally signed with a CDP API key), writes a payment log"

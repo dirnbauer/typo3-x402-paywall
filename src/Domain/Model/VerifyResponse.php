@@ -19,10 +19,17 @@ use Webconsulting\X402Paywall\Utility\ScalarValue;
  */
 final readonly class VerifyResponse
 {
+    /** Specification v2, section 9: verification failed for a reason the facilitator did not name. */
+    public const string UNEXPECTED_VERIFY_ERROR = 'unexpected_verify_error';
+
+    /**
+     * @param string $invalidMessage Human-readable detail for a rejection (the reference SDKs send it alongside invalidReason)
+     */
     public function __construct(
         public bool $isValid,
         public string $payer = '',
         public string $invalidReason = '',
+        public string $invalidMessage = '',
     ) {}
 
     /**
@@ -35,12 +42,14 @@ final readonly class VerifyResponse
         return new self(
             isValid: $isValid,
             payer: ScalarValue::string($body['payer'] ?? null),
-            invalidReason: $isValid ? '' : ScalarValue::string($body['invalidReason'] ?? $body['error'] ?? $body['message'] ?? null, 'verification_failed'),
+            invalidReason: $isValid ? '' : ScalarValue::string($body['invalidReason'] ?? null, self::UNEXPECTED_VERIFY_ERROR),
+            // Facilitators without a VerifyResponse body (API gateways, CDP) describe the problem in errorMessage or message.
+            invalidMessage: $isValid ? '' : ScalarValue::string($body['invalidMessage'] ?? $body['errorMessage'] ?? $body['message'] ?? $body['error'] ?? $body['errorType'] ?? null),
         );
     }
 
-    public static function invalid(string $reason): self
+    public static function invalid(string $reason, string $message = ''): self
     {
-        return new self(isValid: false, invalidReason: $reason);
+        return new self(isValid: false, invalidReason: $reason, invalidMessage: $message);
     }
 }

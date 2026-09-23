@@ -30,9 +30,9 @@ use Webconsulting\X402Paywall\Utility\ScalarValue;
  */
 final class X402V1
 {
-    public const VERSION = 1;
-    public const HEADER_PAYMENT = 'X-PAYMENT';
-    public const HEADER_PAYMENT_RESPONSE = 'X-PAYMENT-RESPONSE';
+    public const int VERSION = 1;
+    public const string HEADER_PAYMENT = 'X-PAYMENT';
+    public const string HEADER_PAYMENT_RESPONSE = 'X-PAYMENT-RESPONSE';
 
     /**
      * v1 402 body ("PaymentRequirementsResponse") for a v2 document.

@@ -26,6 +26,8 @@
         wrongNetwork: root.dataset.x402LabelWrongNetwork || 'Please switch your wallet to the required network.',
         signatureCancelled: root.dataset.x402LabelSignatureCancelled || 'Signature cancelled.',
         verificationFailed: root.dataset.x402LabelVerificationFailed || 'Payment was not accepted.',
+        settlementFailed: root.dataset.x402LabelSettlementFailed || 'The payment could not be completed.',
+        settlementPending: root.dataset.x402LabelSettlementPending || 'Your payment could not be confirmed yet. Check your wallet before you pay again.',
         unexpected: root.dataset.x402LabelUnexpected || 'Unexpected error.',
         processing: root.dataset.x402LabelProcessing || 'Processing...',
         success: root.dataset.x402LabelSuccess || 'Payment accepted, loading content...',
@@ -192,19 +194,37 @@
         }
     }
 
+    /**
+     * A rejected payment carries the reason in PAYMENT-REQUIRED (error); a payment that verified but
+     * did not settle carries the SettlementResponse in PAYMENT-RESPONSE (success: false).
+     */
     async function readError(response) {
-        const header = response.headers.get('PAYMENT-REQUIRED');
-        if (header) {
-            try {
-                const decoded = JSON.parse(atob(header));
-                if (decoded && decoded.error) {
-                    return labels.verificationFailed + ' (' + decoded.error + ')';
-                }
-            } catch (error) {
-                // fall through
+        const settlement = decodeHeader(response.headers.get('PAYMENT-RESPONSE'));
+        if (settlement && settlement.success === false) {
+            // Pending, or the facilitator failed in an unknown state: the transfer may still go through.
+            if (settlement.errorReason === 'settlement_pending' || settlement.errorReason === 'unexpected_settle_error') {
+                return labels.settlementPending;
             }
+            return labels.settlementFailed + (settlement.errorReason ? ' (' + settlement.errorReason + ')' : '');
+        }
+        const paymentRequired = decodeHeader(response.headers.get('PAYMENT-REQUIRED'));
+        if (paymentRequired && paymentRequired.error) {
+            return labels.verificationFailed + ' (' + paymentRequired.error + ')';
         }
         return labels.verificationFailed;
+    }
+
+    function decodeHeader(value) {
+        if (!value) {
+            return null;
+        }
+        try {
+            const binary = atob(value);
+            const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+            return JSON.parse(new TextDecoder().decode(bytes));
+        } catch (error) {
+            return null;
+        }
     }
 
     function base64Utf8(text) {

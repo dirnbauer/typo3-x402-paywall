@@ -89,6 +89,29 @@ final class PaymentRequirementTest extends UnitTestCase
     }
 
     #[Test]
+    public function matchesRequiresTheSameTimeoutAndTheEchoedExtra(): void
+    {
+        $requirement = PaymentRequirement::fromConfig(PaywallConfiguration::fromArray(['enabled' => true, 'wallet_address' => '0xAbCd', 'network' => 'base-sepolia']), '0.01');
+        $accepted = $requirement->toArray();
+
+        self::assertFalse($requirement->matches(['maxTimeoutSeconds' => 3600] + $accepted));
+        self::assertFalse($requirement->matches(['extra' => ['name' => 'USDC']] + $accepted));
+        self::assertFalse($requirement->matches(['extra' => ['name' => 'Fake USD', 'version' => '2']] + $accepted));
+        self::assertTrue($requirement->matches(['extra' => ['name' => 'USDC', 'version' => '2', 'clientHint' => 'ignored']] + $accepted));
+    }
+
+    #[Test]
+    public function matchesRefusesTransferMethodsAndFlowsThatAreNotImplemented(): void
+    {
+        $requirement = PaymentRequirement::fromConfig(PaywallConfiguration::fromArray(['enabled' => true, 'wallet_address' => '0xAbCd', 'network' => 'base-sepolia']), '0.01');
+        $extra = $requirement->extra;
+
+        self::assertTrue($requirement->matches(['extra' => $extra + ['assetTransferMethod' => 'eip3009', 'paymentFlow' => 'authorization']] + $requirement->toArray()));
+        self::assertFalse($requirement->matches(['extra' => $extra + ['assetTransferMethod' => 'permit2']] + $requirement->toArray()));
+        self::assertFalse($requirement->matches(['extra' => $extra + ['paymentFlow' => 'upfront']] + $requirement->toArray()));
+    }
+
+    #[Test]
     public function fromArrayIgnoresUnknownFieldsAndDefaultsTheTimeout(): void
     {
         $requirement = PaymentRequirement::fromArray([

@@ -35,6 +35,7 @@ use TYPO3\CMS\Frontend\Page\PageInformation;
 use TYPO3\TestingFramework\Core\Unit\UnitTestCase;
 use Webconsulting\X402Paywall\Configuration\ConfigurationProvider;
 use Webconsulting\X402Paywall\Domain\Model\PaymentRequired;
+use Webconsulting\X402Paywall\Domain\Model\SettlementResponse;
 use Webconsulting\X402Paywall\Event\PaymentReceivedEvent;
 use Webconsulting\X402Paywall\Event\PaymentRequiredEvent;
 use Webconsulting\X402Paywall\Http\PaymentRequiredResponseFactory;
@@ -50,13 +51,13 @@ final class X402PaywallMiddlewareTest extends UnitTestCase
 {
     use JsonTestTrait;
 
-    private const WALLET = '0x1111111111111111111111111111111111111111';
-    private const USDC_SEPOLIA = '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
+    private const string WALLET = '0x1111111111111111111111111111111111111111';
+    private const string USDC_SEPOLIA = '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
 
     /** @var list<ResponseInterface> */
     private array $facilitatorResponses = [];
 
-    /** @var list<array{url: string, json: array<array-key, mixed>}> */
+    /** @var list<array{url: string, raw: string, json: array<array-key, mixed>}> */
     private array $facilitatorRequests = [];
 
     /** @var list<array<string, mixed>> */
@@ -104,7 +105,8 @@ final class X402PaywallMiddlewareTest extends UnitTestCase
         $document = PaymentRequired::fromHeaderValue($response->getHeaderLine('PAYMENT-REQUIRED'));
         self::assertSame('https://example.test/premium', $document->resource->url);
         self::assertSame('Premium article', $document->resource->description);
-        self::assertSame('application/json', $document->resource->mimeType);
+        self::assertSame('text/html', $document->resource->mimeType);
+        self::assertSame(['url' => 'https://example.test/premium', 'description' => 'Premium article', 'mimeType' => 'text/html'], $document->resource->toArray());
         self::assertSame('exact', $document->first()->scheme);
         self::assertSame('eip155:84532', $document->first()->network);
         self::assertSame('50000', $document->first()->amount);
@@ -205,7 +207,7 @@ final class X402PaywallMiddlewareTest extends UnitTestCase
 
         self::assertFalse($this->handlerCalled);
         self::assertSame(402, $response->getStatusCode());
-        self::assertSame('verification_failed', PaymentRequired::fromHeaderValue($response->getHeaderLine('PAYMENT-REQUIRED'))->error);
+        self::assertSame('unexpected_verify_error', PaymentRequired::fromHeaderValue($response->getHeaderLine('PAYMENT-REQUIRED'))->error);
     }
 
     #[Test]
@@ -220,9 +222,83 @@ final class X402PaywallMiddlewareTest extends UnitTestCase
         $response = $this->middleware()->process($request, $this->handler());
 
         self::assertSame(402, $response->getStatusCode());
-        self::assertSame('invalid_transaction_state', PaymentRequired::fromHeaderValue($response->getHeaderLine('PAYMENT-REQUIRED'))->error);
+        self::assertSame('', $response->getHeaderLine('PAYMENT-REQUIRED'));
+        self::assertSame('no-store', $response->getHeaderLine('Cache-Control'));
+        $settlement = SettlementResponse::fromHeaderValue($response->getHeaderLine('PAYMENT-RESPONSE'));
+        self::assertFalse($settlement->success);
+        self::assertSame('invalid_transaction_state', $settlement->errorReason);
+        self::assertSame('0xPayer', $settlement->payer);
+        self::assertSame($settlement->toArray(), Json::decodeObject((string)$response->getBody()));
         self::assertSame('failed', $this->loggedRows[0]['status']);
         self::assertSame([], $this->events);
+    }
+
+    #[Test]
+    public function pendingSettlementIsRetriedOnceAndReportedAsPending(): void
+    {
+        $pending = ['success' => false, 'errorReason' => 'settlement_pending', 'transaction' => '0x' . str_repeat('ab', 32), 'network' => 'eip155:84532'];
+        $this->facilitatorResponses = [
+            new JsonResponse(['isValid' => true, 'payer' => '0xPayer']),
+            new JsonResponse($pending, 500),
+            new JsonResponse($pending, 500),
+        ];
+        $request = $this->request('/premium')->withHeader('PAYMENT-SIGNATURE', $this->paymentSignature());
+
+        $response = $this->middleware()->process($request, $this->handler());
+
+        self::assertSame(402, $response->getStatusCode());
+        self::assertCount(3, $this->facilitatorRequests);
+        self::assertSame($this->facilitatorRequests[1]['raw'], $this->facilitatorRequests[2]['raw']);
+        $settlement = SettlementResponse::fromHeaderValue($response->getHeaderLine('PAYMENT-RESPONSE'));
+        self::assertTrue($settlement->isSettlementPending());
+        self::assertSame($pending['transaction'], $settlement->transaction);
+        self::assertSame('pending', $this->loggedRows[0]['status']);
+        self::assertSame($pending['transaction'], $this->loggedRows[0]['tx_hash']);
+        self::assertSame([], $this->events);
+    }
+
+    #[Test]
+    public function pendingSettlementThatConfirmsOnRetryServesTheContent(): void
+    {
+        $this->facilitatorResponses = [
+            new JsonResponse(['isValid' => true, 'payer' => '0xPayer']),
+            new JsonResponse(['success' => false, 'errorReason' => 'settlement_pending', 'transaction' => '0xtx', 'network' => 'eip155:84532'], 500),
+            new JsonResponse(['success' => true, 'transaction' => '0xtx', 'network' => 'eip155:84532', 'payer' => '0xPayer']),
+        ];
+        $request = $this->request('/premium')->withHeader('PAYMENT-SIGNATURE', $this->paymentSignature());
+
+        $response = $this->middleware()->process($request, $this->handler());
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertTrue(SettlementResponse::fromHeaderValue($response->getHeaderLine('PAYMENT-RESPONSE'))->success);
+        self::assertSame('settled', $this->loggedRows[0]['status']);
+    }
+
+    #[Test]
+    public function thePaymentPayloadIsForwardedAsReceived(): void
+    {
+        $this->facilitatorResponses = [new JsonResponse(['isValid' => false, 'invalidReason' => 'invalid_exact_evm_payload_signature'])];
+        $signature = base64_encode(str_replace('"payload":', '"extensions":{},"payload":', (string)base64_decode($this->paymentSignature(), true)));
+
+        $this->middleware()->process($this->request('/premium')->withHeader('PAYMENT-SIGNATURE', $signature), $this->handler());
+
+        self::assertStringContainsString('"extensions":{}', $this->facilitatorRequests[0]['raw']);
+    }
+
+    #[Test]
+    public function serviceMetadataIsAnnouncedWhenValid(): void
+    {
+        $request = $this->request('/premium', siteConfig: [
+            'service_name' => 'Example Research',
+            'service_tags' => ['research', 'reports', str_repeat('x', 33)],
+            'service_icon_url' => 'javascript:alert(1)',
+        ]);
+
+        $resource = PaymentRequired::fromHeaderValue($this->middleware()->process($request, $this->handler())->getHeaderLine('PAYMENT-REQUIRED'))->resource;
+
+        self::assertSame('Example Research', $resource->serviceName);
+        self::assertSame(['research', 'reports'], $resource->tags);
+        self::assertSame('', $resource->iconUrl);
     }
 
     #[Test]
@@ -268,6 +344,28 @@ final class X402PaywallMiddlewareTest extends UnitTestCase
         self::assertSame('50000', self::jsonPath($this->facilitatorRequests[0]['json'], 'paymentRequirements', 'maxAmountRequired'));
         self::assertSame('exact', self::jsonPath($this->facilitatorRequests[0]['json'], 'paymentPayload', 'scheme'));
         self::assertSame('0xPayer', self::jsonPath(Json::decodeObject((string)base64_decode($response->getHeaderLine('PAYMENT-RESPONSE'), true)), 'payer'));
+    }
+
+    #[Test]
+    public function legacyClientsGetTheV1BodyAndXPaymentResponseWhenSettlementFails(): void
+    {
+        $v1 = base64_encode(json_encode([
+            'x402Version' => 1,
+            'scheme' => 'exact',
+            'network' => 'base-sepolia',
+            'payload' => ['signature' => '0xsig', 'authorization' => ['from' => '0xPayer']],
+        ], JSON_THROW_ON_ERROR));
+        $this->facilitatorResponses = [
+            new JsonResponse(['isValid' => true, 'payer' => '0xPayer']),
+            new JsonResponse(['success' => false, 'errorReason' => 'insufficient_funds', 'transaction' => '', 'network' => 'base-sepolia']),
+        ];
+        $request = $this->request('/premium', siteConfig: ['legacy_v1' => true])->withHeader('X-PAYMENT', $v1);
+
+        $response = $this->middleware()->process($request, $this->handler());
+
+        self::assertSame(402, $response->getStatusCode());
+        self::assertSame('insufficient_funds', Json::decodeObject((string)$response->getBody())['error']);
+        self::assertSame('insufficient_funds', SettlementResponse::fromHeaderValue($response->getHeaderLine('X-PAYMENT-RESPONSE'))->errorReason);
     }
 
     #[Test]
@@ -365,8 +463,8 @@ final class X402PaywallMiddlewareTest extends UnitTestCase
     {
         $requestFactory = self::createStub(RequestFactory::class);
         $requestFactory->method('request')->willReturnCallback(function (string $url, string $method, array $options): ResponseInterface {
-            $json = $options['json'] ?? null;
-            $this->facilitatorRequests[] = ['url' => $url, 'json' => is_array($json) ? $json : []];
+            $raw = is_string($options['body'] ?? null) ? $options['body'] : '';
+            $this->facilitatorRequests[] = ['url' => $url, 'raw' => $raw, 'json' => $raw !== '' ? Json::decodeObject($raw) : []];
 
             return array_shift($this->facilitatorResponses) ?? new Response(null, 500);
         });

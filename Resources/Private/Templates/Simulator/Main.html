@@ -1,0 +1,71 @@
+<html
+  xmlns:be="http://typo3.org/ns/TYPO3/CMS/Backend/ViewHelpers"
+  xmlns:core="http://typo3.org/ns/TYPO3/CMS/Core/ViewHelpers"
+  xmlns:f="http://typo3.org/ns/TYPO3/CMS/Fluid/ViewHelpers"
+  data-namespace-typo3-fluid="true"
+>
+
+<f:layout name="Module" />
+
+<f:section name="Content">
+  <h1><f:translate key="simulator.title" domain="x402_paywall.mod" /></h1>
+  <p><f:translate key="simulator.description" domain="x402_paywall.mod" /></p>
+
+  <f:if condition="{scenarios}">
+    <f:then>
+      <form action="{runUri}" method="post" data-x402-simulator data-x402-output="x402-simulator-output" novalidate>
+        <div class="row">
+          <f:if condition="{sites -> f:count()} > 1">
+            <f:then>
+              <div class="col-md-4 form-group">
+                <label class="form-label" for="x402-site"><f:translate key="simulator.site" domain="x402_paywall.mod" /></label>
+                <select id="x402-site" name="site" class="form-select">
+                  <f:for each="{sites}" as="candidate">
+                    <option value="{candidate.identifier}" data-url="{be:moduleLink(route: 'web_x402_paywall_simulator', arguments: {site: candidate.identifier})}" {f:if(condition: candidate.selected, then: 'selected') -> f:format.raw()}>{candidate.identifier}</option>
+                  </f:for>
+                </select>
+              </div>
+            </f:then>
+            <f:else>
+              <input type="hidden" name="site" value="{site}" />
+            </f:else>
+          </f:if>
+          <div class="col-md form-group">
+            <label class="form-label" for="x402-scenario"><f:translate key="simulator.scenario" domain="x402_paywall.mod" /></label>
+            <select id="x402-scenario" name="scenario" class="form-select" aria-describedby="x402-scenario-description">
+              <f:for each="{scenarios}" as="scenario">
+                <option value="{scenario.id}" data-url="{scenario.url}" data-description="{scenario.description}">{scenario.label}</option>
+              </f:for>
+            </select>
+            <div class="form-text" id="x402-scenario-description" data-x402-scenario-description>{scenarios.0.description}</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="x402-url"><f:translate key="simulator.url" domain="x402_paywall.mod" /></label>
+          <input id="x402-url" name="url" type="url" class="form-control" value="{scenarios.0.url}" required aria-describedby="x402-url-description" />
+          <div class="form-text" id="x402-url-description"><f:translate key="simulator.url.description" domain="x402_paywall.mod" /></div>
+        </div>
+        <button type="submit" class="btn btn-primary">
+          <core:icon identifier="actions-play" size="small" />
+          <span data-x402-submit-label><f:translate key="simulator.run" domain="x402_paywall.mod" /></span>
+        </button>
+      </form>
+
+      <div id="x402-simulator-output" class="mt-4" aria-live="polite">
+        <f:be.infobox state="{f:constant(name: 'TYPO3\CMS\Core\Type\ContextualFeedbackSeverity::NOTICE')}">
+          <f:translate key="simulator.empty" domain="x402_paywall.mod" />
+        </f:be.infobox>
+      </div>
+    </f:then>
+    <f:else>
+      <f:be.infobox
+        title="{f:translate(key: 'simulator.no_site.title', domain: 'x402_paywall.mod')}"
+        state="{f:constant(name: 'TYPO3\CMS\Core\Type\ContextualFeedbackSeverity::INFO')}"
+      >
+        <f:translate key="simulator.no_site.description" domain="x402_paywall.mod" />
+      </f:be.infobox>
+    </f:else>
+  </f:if>
+</f:section>
+
+</html>
