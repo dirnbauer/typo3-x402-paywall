@@ -9,6 +9,13 @@ Changelog
 The complete release history is kept in
 `CHANGELOG.md <https://github.com/dirnbauer/typo3-x402-paywall/blob/main/CHANGELOG.md>`__.
 
+1.4.1
+=====
+
+*   The :guilabel:`Simulator` runs its scenarios again: the request is sent
+    as JSON, which the run action expects. Before, every run ended with
+    "The simulator request is invalid."
+
 1.4.0
 =====
 

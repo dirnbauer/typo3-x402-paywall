@@ -3,6 +3,14 @@
 All notable changes to `webconsulting/typo3-x402-paywall` are documented in
 this file.
 
+## [1.4.1] - 2026-09-27
+
+### Fixed
+
+- The simulator runs its scenarios again. It answered every run with "The simulator request is
+  invalid." because `AjaxRequest` posts form data unless the request says it is JSON, and the
+  run action reads a JSON body. The request now carries `Content-Type: application/json`.
+
 ## [1.4.0] - 2026-09-23
 
 ### Protocol

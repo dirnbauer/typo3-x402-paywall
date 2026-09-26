@@ -48,11 +48,12 @@ class X402Simulator {
     this.setBusy(true);
     this.output.replaceChildren();
     try {
+      // The controller reads a JSON body; without the header AjaxRequest sends FormData.
       const response = await new AjaxRequest(this.form.action).post({
         site: this.form.elements.site.value,
         scenario: this.scenario.value,
         url: this.url.value.trim(),
-      });
+      }, { headers: { 'Content-Type': 'application/json' } });
       this.render(await response.resolve());
     } catch (error) {
       let message = error instanceof Error ? error.message : '';
