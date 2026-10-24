@@ -3,6 +3,14 @@
 All notable changes to `webconsulting/typo3-x402-paywall` are documented in
 this file.
 
+## 1.4.2 — 2026-10-24
+
+### Changed
+
+- Support the official PHP container executable for `runTests.sh -p` and verify its actual PHP version.
+- Refresh compatible Composer development tools and dependency audit coverage.
+- Pin current CI action releases and patched MariaDB images; require PHP 8.4 and 8.5 checks.
+
 ## [1.4.1] - 2026-09-27
 
 ### Fixed

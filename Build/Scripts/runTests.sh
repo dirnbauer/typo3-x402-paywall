@@ -12,16 +12,29 @@ set -euo pipefail
 SUITE="ci"
 DATABASE="sqlite"
 PHP_BIN="${PHP_BINARY:-php}"
+PHP_VERSION=""
 
 while getopts "s:d:p:h" OPTION; do
     case "${OPTION}" in
         s) SUITE="${OPTARG}" ;;
         d) DATABASE="${OPTARG}" ;;
-        p) PHP_BIN="php${OPTARG}" ;;
+        p) PHP_VERSION="${OPTARG}" ;;
         h) sed -n '2,12p' "$0"; exit 0 ;;
         *) exit 1 ;;
     esac
 done
+
+# Official PHP containers expose `php`, while some local installations also
+# provide versioned executables. Accept either, then verify the actual runtime.
+if [[ -n "${PHP_VERSION}" ]]; then
+    if command -v "php${PHP_VERSION}" >/dev/null 2>&1; then
+        PHP_BIN="php${PHP_VERSION}"
+    fi
+    if [[ "$("${PHP_BIN}" -r 'echo PHP_MAJOR_VERSION . "." . PHP_MINOR_VERSION;')" != "${PHP_VERSION}" ]]; then
+        echo "Run this command in the requested PHP ${PHP_VERSION} environment." >&2
+        exit 1
+    fi
+fi
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "${ROOT_DIR}"
